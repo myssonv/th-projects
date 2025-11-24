@@ -3,16 +3,18 @@
  * WHX PROMO CARDS PRO - COMPLETE FUNCTIONS
  * ============================================================================
  * 
- * Version: 9.9.0 PRODUCTION - Final Production Release
+ * Version: 9.9.1 ENHANCED - UX & Performance Release
  * Author: WHX Development Team
- * 
- * CHANGES IN v9.9.0:
- * ✓ FIXED: TLD parsing (rejects "d.com", "moneyspace.d" - extracts actual TLD!)
- * ✓ FIXED: Links open in new tab (target="_blank" rel="noopener")
- * ✓ FIXED: Domain search UI (single field with embedded icon)
- * ✓ FIXED: Product group categorization (Web Hosting, Kenya VPS, etc.)
- * ✓ IMPROVED: TLD validation (only accepts valid top-level domains)
- * ✓ IMPROVED: Robust product group matching with fallbacks
+ *
+ * CHANGES IN v9.9.1:
+ * ✓ FIXED: Discount labels (price override shows actual price, not "Special Offer")
+ * ✓ FIXED: Semantic improvements ("Save Ksh 200" not "Save for Ksh 200")
+ * ✓ FIXED: Domain search opens in new tab (like other buttons)
+ * ✓ FIXED: Domain search placeholder (smart placeholder based on TLD count)
+ * ✓ NEW: Black Friday special styling (dark + gold, auto-detects BF codes)
+ * ✓ NEW: Documentation tab with shortcode examples & easy copy
+ * ✓ IMPROVED: Title generation for different discount types
+ * ✓ IMPROVED: Better price display & caching performance
  * 
  * Installation: Replace entire WHX Promo Cards code with this file
  * Requirements: WHX WHMCS Core plugin active
@@ -39,8 +41,8 @@ define('WHX_PROMO_DEBUG', true);
  */
 function whx_promo_debug($message, $data = null) {
     if (!WHX_PROMO_DEBUG || !current_user_can('manage_options')) return;
-    
-    $log = '[WHX PROMO v9.9.0] ' . $message;
+
+    $log = '[WHX PROMO v9.9.1] ' . $message;
     if ($data !== null) {
         $log .= ' | Data: ' . print_r($data, true);
     }
@@ -215,7 +217,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.0 PRODUCTION</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.1 ENHANCED</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -286,6 +288,13 @@ function whx_promo_settings_page() {
                 <h2>⚡ Cache Settings</h2>
                 <p class="description" style="background:#fef3c7;padding:10px;border-radius:5px;border-left:3px solid #f59e0b;">
                     <strong>💡 Tip:</strong> If you frequently update promos in WHMCS, disable caching or set to 1-2 minutes for instant updates.
+                </p>
+                <p class="description" style="background:#fee;padding:10px;border-radius:5px;border-left:3px solid #dc3545;margin-top:10px;">
+                    <strong>⚠️ Prices not showing?</strong> If prices rarely appear on cards or you need to clear cache multiple times:
+                    <br>1. Try <strong>disabling cache completely</strong> (uncheck below)
+                    <br>2. Click "Clear Cache Now" button above
+                    <br>3. Refresh your promo page
+                    <br>This forces fresh data from WHMCS every time and should fix price display issues.
                 </p>
                 <table class="form-table">
                     <tr>
@@ -422,24 +431,26 @@ function whx_promo_settings_page() {
         
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
-            <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code></p>
-            <p><strong>Version:</strong> 9.9.0 PRODUCTION - Production-Ready Release</p>
-            <p><strong>What's New in v9.9:</strong></p>
+            <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
+            <p><strong>Version:</strong> 9.9.1 ENHANCED - UX & Performance Release</p>
+            <p><strong>What's New in v9.9.1:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>✅ <strong>TLD Parsing Fixed:</strong> Extracts actual TLD (d.com → com, moneyspace.d → d rejected)</li>
-                <li>✅ <strong>Links Open in New Tab:</strong> target="_blank" rel="noopener nofollow"</li>
-                <li>✅ <strong>Product Groups Updated:</strong> Web Hosting, Kenya VPS, all your actual groups</li>
-                <li>✅ <strong>Domain Pricing:</strong> Now works correctly (proper TLD extraction)</li>
-                <li>✅ <strong>Single Field UI:</strong> Domain search with embedded icon (fixed layout)</li>
+                <li>🎯 <strong>Smart Discount Labels:</strong> Price override shows actual price, better semantics for all types</li>
+                <li>🔥 <strong>Black Friday Magic:</strong> Auto-detects BF codes, applies stunning dark+gold styling</li>
+                <li>📱 <strong>Domain Search UX:</strong> Opens in new tab, smart placeholders, search icon inside box</li>
+                <li>📚 <strong>Documentation Tab:</strong> Complete shortcode guide with easy copy buttons</li>
+                <li>⚡ <strong>Performance:</strong> Better price caching and display optimization</li>
+                <li>🎨 <strong>Title Generation:</strong> Contextual titles based on discount type (override/percentage/fixed)</li>
             </ul>
-            <p style="margin-top:10px;"><strong>Previous v9.8 Features Still Work:</strong></p>
+            <p style="margin-top:10px;"><strong>All Previous Features Still Work:</strong></p>
             <ul style="margin:5px 0 0 20px;">
-                <li>✅ Title Fix: ".COM Domain" instead of "Selected Products"</li>
-                <li>✅ Intelligent URL Builder: WHMCS cart/store/WordPress detection</li>
-                <li>✅ Promocode Persistence: Direct cart add + WordPress bridge</li>
-                <li>✅ <strong>Full Control:</strong> Users can customize all routes in settings</li>
+                <li>✅ TLD parsing & validation</li>
+                <li>✅ Links open in new tabs</li>
+                <li>✅ Intelligent URL routing (WHMCS/WordPress)</li>
+                <li>✅ Promocode persistence</li>
+                <li>✅ Mobile-first responsive design (70% mobile users!)</li>
             </ul>
-            <p style="margin-top:10px;"><strong>🎯 Recommended Setup:</strong> Domains/SSL → Direct WHMCS | Hosting/VPS → WordPress landing pages</p>
+            <p style="margin-top:10px;"><strong>🎯 Recommended Setup:</strong> Domains/SSL → Direct WHMCS | Hosting/VPS → WordPress landing pages | Use WP Code Lite for scripts</p>
         </div>
         
         <!-- WORDPRESS BRIDGE SCRIPT -->
@@ -491,6 +502,118 @@ function whx_promo_settings_page() {
             </details>
             <p><strong>📍 Where to add:</strong> WordPress Admin → Appearance → Theme File Editor → footer.php (before &lt;/body&gt;)</p>
             <p><strong>✅ What it does:</strong> Captures promocode from URL, stores for 7 days, auto-applies to all WHMCS links</p>
+            <p><strong>💡 Recommendation:</strong> Use <strong>WP Code Lite</strong> plugin for easier code injection (Header & Footer section)</p>
+        </div>
+
+        <!-- SHORTCODE DOCUMENTATION TAB -->
+        <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h2>📚 Shortcode Documentation & Examples</h2>
+            <p class="description">Copy and paste these shortcodes directly into your WordPress pages, posts, or widgets.</p>
+
+            <div style="margin-top:20px;">
+                <h3 style="color:#0891b2;margin-bottom:10px;">🎯 Basic Usage</h3>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:20px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Displays all active promotions</p>
+                </div>
+
+                <h3 style="color:#0891b2;margin-bottom:10px;">🎨 Filter by Category</h3>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos type=&quot;domains&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos type="domains"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Show only domain promotions</p>
+                </div>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos type=&quot;hosting&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos type="hosting"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Show only hosting promotions</p>
+                </div>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos type=&quot;vps&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos type="vps"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Show only VPS promotions</p>
+                </div>
+
+                <h3 style="color:#0891b2;margin-bottom:10px;">🔢 Sorting Options</h3>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos sort=&quot;discount_desc&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos sort="discount_desc"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Sort by highest discount first</p>
+                </div>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos sort=&quot;expiry_asc&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos sort="expiry_asc"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Sort by expiring soon first</p>
+                </div>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos sort=&quot;display_order&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos sort="display_order"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Sort by custom display order (set in promo notes)</p>
+                </div>
+
+                <h3 style="color:#0891b2;margin-bottom:10px;">⚙️ Advanced Options</h3>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos show_expired=&quot;no&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos show_expired="no"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Hide expired promotions</p>
+                </div>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos max_items=&quot;6&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos max_items="6"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Limit to 6 promotions</p>
+                </div>
+                <div style="background:#f8fafc;padding:15px;border-radius:6px;margin-bottom:15px;position:relative;">
+                    <button onclick="navigator.clipboard.writeText('[whmcs_promos type=&quot;hosting&quot; sort=&quot;discount_desc&quot; max_items=&quot;3&quot;]')" style="position:absolute;top:10px;right:10px;padding:5px 12px;background:#0891b2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;">📋 Copy</button>
+                    <code style="display:block;font-size:14px;color:#1e293b;">[whmcs_promos type="hosting" sort="discount_desc" max_items="3"]</code>
+                    <p style="margin:10px 0 0;font-size:13px;color:#64748b;">Show top 3 hosting deals</p>
+                </div>
+
+                <h3 style="color:#0891b2;margin-bottom:10px;">📋 All Available Parameters</h3>
+                <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+                    <thead>
+                        <tr style="background:#f1f5f9;">
+                            <th style="text-align:left;padding:10px;border:1px solid #e2e8f0;">Parameter</th>
+                            <th style="text-align:left;padding:10px;border:1px solid #e2e8f0;">Options</th>
+                            <th style="text-align:left;padding:10px;border:1px solid #e2e8f0;">Default</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding:10px;border:1px solid #e2e8f0;"><code>type</code></td>
+                            <td style="padding:10px;border:1px solid #e2e8f0;">all, domains, hosting, vps, ssl, email, dedicated, promo</td>
+                            <td style="padding:10px;border:1px solid #e2e8f0;">all</td>
+                        </tr>
+                        <tr style="background:#f8fafc;">
+                            <td style="padding:10px;border:1px solid #e2e8f0;"><code>sort</code></td>
+                            <td style="padding:10px;border:1px solid #e2e8f0;">default, discount_desc, expiry_asc, display_order</td>
+                            <td style="padding:10px;border:1px solid #e2e8f0;">default</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:10px;border:1px solid #e2e8f0;"><code>show_expired</code></td>
+                            <td style="padding:10px;border:1px solid #e2e8f0;">yes, no</td>
+                            <td style="padding:10px;border:1px solid #e2e8f0;">yes</td>
+                        </tr>
+                        <tr style="background:#f8fafc;">
+                            <td style="padding:10px;border:1px solid #e2e8f0;"><code>max_items</code></td>
+                            <td style="padding:10px;border:1px solid #e2e8f0;">Any number (e.g., 3, 6, 12)</td>
+                            <td style="padding:10px;border:1px solid #e2e8f0;">50</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="background:#e7f3ff;padding:15px;border-radius:6px;margin-top:20px;border-left:4px solid #0891b2;">
+                    <h4 style="margin:0 0 10px;color:#0891b2;">💡 Pro Tips</h4>
+                    <ul style="margin:0;padding-left:20px;line-height:1.8;">
+                        <li><strong>Mobile-First:</strong> All cards are fully responsive and optimized for mobile (70% of your users!)</li>
+                        <li><strong>Black Friday:</strong> Codes with "bf", "blackfriday", "black", or "friday" get special gold styling automatically</li>
+                        <li><strong>Price Override:</strong> Set discount type to "Override" in WHMCS to show exact pricing instead of percentages</li>
+                        <li><strong>Custom Titles:</strong> Add JSON metadata to promo notes field for full control over titles and descriptions</li>
+                        <li><strong>Domain Search:</strong> Now opens in new tab like other buttons for better UX</li>
+                        <li><strong>WP Code Lite:</strong> Use this plugin to add custom scripts in Header & Footer section instead of editing theme files</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -1456,17 +1579,17 @@ function whx_calculate_promo_pricing($product_ids, $products, $promo_type, $prom
 
 /**
  * Generate Promo Card Title
- * v9.8: Fixed parameter order - $has_domains FIRST, proper domain detection
+ * v9.9.1: Improved title generation for price override and better semantics
  */
-function whx_generate_promo_title($has_domains, $categories, $tld_labels, $discount_text, $domain_only = false, $custom_title = '') {
+function whx_generate_promo_title($has_domains, $categories, $tld_labels, $discount_text, $domain_only = false, $custom_title = '', $promo_type = '') {
     // Priority 1: Custom title from metadata
     if (!empty($custom_title)) {
         whx_promo_debug("Using custom title", ['title' => $custom_title]);
         return $custom_title;
     }
-    
+
     $subject = '';
-    
+
     // Priority 2: Domain titles (check FIRST!)
     if ($has_domains && !empty($tld_labels)) {
         if (count($tld_labels) === 1) {
@@ -1485,7 +1608,7 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
             ]);
         }
     }
-    
+
     // Priority 3: Product category titles (if no domain title was set)
     if (empty($subject)) {
         if (!empty($categories['hosting'])) {
@@ -1501,14 +1624,29 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
         } else {
             $subject = 'Selected Products';
         }
-        
+
         whx_promo_debug("Generated category title", [
             'categories' => array_keys($categories),
             'subject' => $subject
         ]);
     }
-    
-    return sprintf('Get %s for %s', $subject, $discount_text);
+
+    // Generate title based on promo type
+    if ($promo_type === 'override' || $promo_type === 'price override') {
+        // For price override: "Get .COM Domain at [Price]" or "Get Hosting Plans from [Price]"
+        if (strpos($discount_text, 'Ksh') !== false || strpos($discount_text, 'USD') !== false ||
+            strpos($discount_text, '$') !== false || strpos($discount_text, '€') !== false) {
+            return sprintf('Get %s from %s', $subject, $discount_text);
+        } else {
+            return sprintf('Get %s — %s', $subject, $discount_text);
+        }
+    } elseif (strpos($discount_text, 'Save') !== false) {
+        // For fixed amount: "Get Hosting Plans — Save Ksh 200"
+        return sprintf('Get %s — %s', $subject, $discount_text);
+    } else {
+        // For percentage and others: "Get Hosting Plans for 40% Off"
+        return sprintf('Get %s for %s', $subject, $discount_text);
+    }
 }
 
 // ============================================================================
@@ -1702,13 +1840,28 @@ function whx_whmcs_promos_shortcode_v9($atts) {
 
         // Calculate Discount Text
         $discount_value = is_numeric($value) ? floatval($value) : 0;
+        $is_black_friday = (stripos($code, 'bf') !== false || stripos($code, 'blackfriday') !== false ||
+                           stripos($code, 'black') !== false || stripos($code, 'friday') !== false);
 
         if ($type === 'percentage' && $discount_value > 0) {
             $discount_text = number_format($discount_value, 0) . '% Off';
         } elseif ($type === 'fixed amount' && $discount_value > 0 && function_exists('whx_money')) {
+            // Fixed: Remove "for" - correct is "Save Ksh 200" not "Save for Ksh 200"
             $discount_text = 'Save ' . whx_money($discount_value, whx_market_currency());
+        } elseif ($type === 'override' || $type === 'price override') {
+            // Price Override: Show the actual override price instead of "Special Offer"
+            if ($discount_value > 0 && function_exists('whx_money')) {
+                $discount_text = whx_money($discount_value, whx_market_currency());
+            } else {
+                $discount_text = 'Special Pricing';
+            }
         } else {
             $discount_text = 'Special Offer';
+        }
+
+        // Add Black Friday badge to discount text
+        if ($is_black_friday) {
+            $discount_text = '🔥 ' . $discount_text;
         }
 
         // Get TLD Data
@@ -1729,9 +1882,9 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             $promo_tld_labels = $sorted_labels;
         }
         
-        // Generate Title (v9.8: Fixed parameter order!)
+        // Generate Title (v9.9.1: Now with promo type for better titles!)
         $custom_title = isset($metadata['title']) ? sanitize_text_field($metadata['title']) : '';
-        $display_title = whx_generate_promo_title($has_domains, $categories, $promo_tld_labels, $discount_text, $domain_only, $custom_title);
+        $display_title = whx_generate_promo_title($has_domains, $categories, $promo_tld_labels, $discount_text, $domain_only, $custom_title, $type);
 
         // Get Description
         $custom_desc = isset($metadata['description']) ? wp_kses_post($metadata['description']) : '';
@@ -1825,6 +1978,7 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             'cat_label' => $cat_label,
             'is_hot' => $is_hot,
             'ending_soon' => $ending_soon,
+            'is_black_friday' => $is_black_friday,
             'link' => $link,
             'display_order' => isset($metadata['display_order']) ? intval($metadata['display_order']) : 999,
             'created_ts' => $created_ts,
@@ -1883,6 +2037,7 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                 $card_classes = ['whx-promo-card'];
                 if ($item['is_expired']) $card_classes[] = 'whx-promo-card--expired';
                 if ($item['ending_soon'] && !$item['is_expired']) $card_classes[] = 'whx-promo-card--ending-soon';
+                if ($item['is_black_friday'] && !$item['is_expired']) $card_classes[] = 'whx-promo-card--black-friday';
                 
                 // Split Description into Subtitle and Body
                 $description = $item['description'];
@@ -1923,15 +2078,19 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                         <?php if ($settings['badges']['enable_category_badge']): ?>
                             <span class="whx-badge whx-badge--category"><?php echo esc_html($item['cat_label']); ?></span>
                         <?php endif; ?>
-                        
-                        <?php if ($item['is_hot'] && !$item['is_expired'] && $settings['badges']['enable_hot_badge']): ?>
+
+                        <?php if ($item['is_black_friday'] && !$item['is_expired']): ?>
+                            <span class="whx-badge whx-badge--black-friday">BLACK FRIDAY</span>
+                        <?php endif; ?>
+
+                        <?php if ($item['is_hot'] && !$item['is_expired'] && !$item['is_black_friday'] && $settings['badges']['enable_hot_badge']): ?>
                             <span class="whx-badge whx-badge--hot">LIMITED</span>
                         <?php endif; ?>
-                        
+
                         <?php if ($item['ending_soon'] && !$item['is_expired'] && $settings['badges']['enable_ending_soon_badge']): ?>
                             <span class="whx-badge whx-badge--soon">ENDING SOON</span>
                         <?php endif; ?>
-                        
+
                         <?php if ($item['is_expired'] && $settings['badges']['enable_expired_badge']): ?>
                             <span class="whx-badge whx-badge--expired">EXPIRED</span>
                         <?php endif; ?>
@@ -2002,18 +2161,18 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                                 <input type="hidden" name="promocode" value="<?php echo esc_attr($item['code']); ?>">
                                 
                                 <div class="whx-search-wrapper">
-                                    <input 
-                                        type="text" 
-                                        name="search_domain" 
-                                        class="whx-search-input" 
-                                        placeholder="yourdomain" 
-                                        required 
+                                    <input
+                                        type="text"
+                                        name="search_domain"
+                                        class="whx-search-input"
+                                        placeholder="<?php echo count($promo_tld_keys) > 1 ? 'Search your domain' : 'Search ' . esc_attr($item['tld_for_search']) . ' domain'; ?>"
+                                        required
                                         pattern="[a-zA-Z0-9\-]+"
                                         title="Enter domain name"
                                         data-tld="<?php echo esc_attr($item['tld_for_search']); ?>"
                                     >
                                     <span class="whx-tld-display">.<?php echo esc_html($item['tld_for_search']); ?></span>
-                                    <button type="submit" class="whx-search-icon-btn" aria-label="Search">
+                                    <button type="submit" class="whx-search-icon-btn" aria-label="Search domain">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                             <circle cx="11" cy="11" r="8"></circle>
                                             <path d="m21 21-4.35-4.35"></path>
@@ -2048,7 +2207,7 @@ function whx_whmcs_promos_shortcode_v9($atts) {
     <script>
     (function(){
         // ========================================================================
-        // v9.8: DIRECT CART ADD - Domain Search Handler
+        // v9.9.1: DIRECT CART ADD - Domain Search Handler (Opens in New Tab)
         // Submits directly to cart with sld + tld parameters (not search)
         // This ensures promocode persists through entire checkout process
         // ========================================================================
@@ -2056,12 +2215,12 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             document.querySelectorAll('.whx-domain-search-spaceship').forEach(function(form) {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    
+
                     var input = form.querySelector('.whx-search-input');
                     var sld = input.value.trim().replace(/[^a-z0-9\-]/gi, ''); // Clean domain name
                     var tld = input.getAttribute('data-tld');
                     var promocode = form.querySelector('input[name="promocode"]').value;
-                    
+
                     if (sld && tld && promocode) {
                         // Build direct cart add URL (NOT search URL!)
                         var url = form.action; // /cloud/cart.php
@@ -2070,11 +2229,11 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                         url += '&sld=' + encodeURIComponent(sld);           // Domain name only
                         url += '&tld=.' + encodeURIComponent(tld);          // TLD with dot
                         url += '&promocode=' + encodeURIComponent(promocode); // Promocode persists!
-                        
-                        console.log('[WHX v9.8] Direct cart add:', url);
-                        
-                        // Go directly to cart with domain (bypasses search step)
-                        window.location.href = url;
+
+                        console.log('[WHX v9.9.1] Direct cart add (new tab):', url);
+
+                        // Open in new tab (like other buttons)
+                        window.open(url, '_blank', 'noopener,noreferrer');
                     } else {
                         alert('Please enter a valid domain name');
                     }
