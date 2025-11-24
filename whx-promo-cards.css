@@ -175,7 +175,15 @@
 /* ============================================================================
    BLACK FRIDAY - Special Unique Styling (Dark with Gold Accents)
    ============================================================================ */
-.whx-promo-card--black-friday{
+.whx-promo-card--black-friday,
+.whx-promo-card--black-friday[data-category="domains"],
+.whx-promo-card--black-friday[data-category="domain"],
+.whx-promo-card--black-friday[data-category="hosting"],
+.whx-promo-card--black-friday[data-category="vps"],
+.whx-promo-card--black-friday[data-category="ssl"],
+.whx-promo-card--black-friday[data-category="email"],
+.whx-promo-card--black-friday[data-category="dedicated"],
+.whx-promo-card--black-friday[data-category="promo"]{
     background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 50%,#1a1a1a 100%) !important;
     border:2px solid #d4af37;
     box-shadow:0 8px 32px rgba(212,175,55,0.3),0 0 0 1px rgba(212,175,55,0.1) !important;
@@ -234,14 +242,30 @@
     color:#e5e5e5 !important;
 }
 
-.whx-promo-card--black-friday .whx-promo-card__btn{
+.whx-promo-card--black-friday .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="domains"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="domain"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="hosting"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="vps"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="ssl"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="email"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="dedicated"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="promo"] .whx-promo-card__btn{
     background:linear-gradient(135deg,#d4af37 0%,#ffd700 100%) !important;
     color:#000 !important;
     font-weight:800;
     box-shadow:0 4px 16px rgba(212,175,55,0.4);
 }
 
-.whx-promo-card--black-friday .whx-promo-card__btn:hover{
+.whx-promo-card--black-friday .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="domains"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="domain"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="hosting"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="vps"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="ssl"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="email"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="dedicated"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="promo"] .whx-promo-card__btn:hover{
     background:linear-gradient(135deg,#ffd700 0%,#ffed4e 100%) !important;
     box-shadow:0 6px 20px rgba(212,175,55,0.6);
 }
@@ -252,6 +276,36 @@
     font-weight:800;
     animation:badgePulse 2s ease-in-out infinite;
     box-shadow:0 2px 8px rgba(212,175,55,0.3);
+}
+
+/* Black Friday Domain Search Button Override */
+.whx-promo-card--black-friday .whx-search-icon-btn{
+    background:linear-gradient(135deg,#d4af37 0%,#ffd700 100%) !important;
+    color:#000 !important;
+    box-shadow:0 2px 8px rgba(212,175,55,0.4);
+}
+
+.whx-promo-card--black-friday .whx-search-icon-btn:hover{
+    background:linear-gradient(135deg,#ffd700 0%,#ffed4e 100%) !important;
+    box-shadow:0 4px 12px rgba(212,175,55,0.5);
+}
+
+/* Black Friday Copy Button Override */
+.whx-promo-card--black-friday .whx-copy-btn{
+    background:linear-gradient(135deg,#d4af37 0%,#ffd700 100%) !important;
+    color:#000 !important;
+    box-shadow:0 2px 8px rgba(212,175,55,0.4);
+}
+
+.whx-promo-card--black-friday .whx-copy-btn:hover{
+    background:linear-gradient(135deg,#ffd700 0%,#ffed4e 100%) !important;
+    box-shadow:0 4px 12px rgba(212,175,55,0.5);
+}
+
+/* Black Friday TLD Display (make it gold too) */
+.whx-promo-card--black-friday .whx-tld-display{
+    color:#ffd700;
+    font-weight:700;
 }
 
 /* ============================================================================
