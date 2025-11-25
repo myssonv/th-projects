@@ -1,9 +1,9 @@
 /**
  * WHX PROMO CARDS - INDUSTRY STANDARD COLORS
- * Version: 9.9.6 - Auto-Generated Descriptions
+ * Version: 9.9.7 - Critical Fixes & UX Improvements
  *
- * Compatible with v9.9.6 Functions
- * Features: Auto-descriptions, multiple categories, instant filter tabs, Black Friday gold styling, mobile-optimized
+ * Compatible with v9.9.7 Functions
+ * Features: Oval filter tabs, smart tab display, second-level domains, auto-descriptions, multiple categories, Black Friday gold styling
  * Copy this entire file to your WordPress Additional CSS or theme stylesheet
  */
 
@@ -20,66 +20,98 @@
 }
 
 /* ============================================================================
-   INSTANT FILTER TABS - v9.9.4
+   INSTANT FILTER TABS - v9.9.7 (Subtle Oval Design)
    ============================================================================ */
 .whx-filter-tabs{
     display:flex;
     flex-wrap:wrap;
-    gap:0.75rem;
-    margin-bottom:2rem;
-    padding:0;
+    gap:0.65rem;
+    margin-bottom:2.5rem; /* More spacing below tabs */
+    padding:0 0 1rem; /* Extra padding at bottom */
     justify-content:center;
 }
 
 .whx-filter-tab{
     display:inline-flex;
     align-items:center;
-    gap:0.5rem;
-    padding:0.625rem 1.25rem;
-    font-size:0.9rem;
-    font-weight:600;
+    gap:0.4rem;
+    padding:0.5rem 1.1rem;
+    font-size:0.875rem;
+    font-weight:500;
     color:#64748b;
-    background:#f8fafc;
-    border:2px solid #e2e8f0;
-    border-radius:8px;
+    background:transparent; /* No background */
+    border:1.5px solid transparent;
+    border-radius:50px; /* Oval/pill shape */
     cursor:pointer;
-    transition:all 0.2s ease;
+    transition:all 0.25s ease;
     white-space:nowrap;
+    position:relative;
+    background-clip:padding-box; /* For gradient border effect */
+}
+
+/* Gradient border for inactive tabs */
+.whx-filter-tab::before{
+    content:'';
+    position:absolute;
+    top:0; right:0; bottom:0; left:0;
+    z-index:-1;
+    margin:-1.5px; /* Match border width */
+    border-radius:inherit;
+    background:linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    opacity:0.6;
 }
 
 .whx-filter-tab:hover{
-    color:#334155;
-    background:#f1f5f9;
-    border-color:#cbd5e1;
-    transform:translateY(-2px);
+    color:#475569;
+    transform:translateY(-1px);
 }
 
+.whx-filter-tab:hover::before{
+    opacity:1;
+    background:linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+}
+
+/* Active tab with gradient background */
 .whx-filter-tab--active{
     color:#fff;
     background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);
-    border-color:#2563eb;
-    box-shadow:0 4px 12px rgba(37,99,235,0.3);
+    border-color:transparent;
+    box-shadow:0 2px 8px rgba(37,99,235,0.25);
+}
+
+.whx-filter-tab--active::before{
+    display:none; /* Remove gradient border for active */
 }
 
 .whx-filter-tab--active:hover{
     background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
-    transform:translateY(-2px);
+    box-shadow:0 3px 12px rgba(37,99,235,0.35);
+    transform:translateY(-1px);
 }
 
 .whx-filter-tab svg{
     flex-shrink:0;
+    width:14px;
+    height:14px;
 }
 
 /* Mobile responsiveness for filter tabs */
 @media (max-width:640px){
     .whx-filter-tabs{
         gap:0.5rem;
-        margin-bottom:1.5rem;
+        margin-bottom:2rem;
+        padding:0 0 0.75rem;
     }
 
     .whx-filter-tab{
-        padding:0.5rem 1rem;
-        font-size:0.85rem;
+        padding:0.45rem 0.95rem;
+        font-size:0.8125rem;
+        font-weight:500;
+    }
+
+    .whx-filter-tab svg{
+        width:13px;
+        height:13px;
     }
 }
 

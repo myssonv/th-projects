@@ -247,7 +247,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.6</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.7</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -500,14 +500,19 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.6 - Auto-Generated Descriptions</p>
-            <p><strong>What's New in v9.9.6:</strong></p>
+            <p><strong>Version:</strong> 9.9.7 - Critical Fixes & UX Improvements</p>
+            <p><strong>What's New in v9.9.7:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>✍️ <strong>Auto-Generated Descriptions:</strong> Smart descriptions created automatically when not provided</li>
-                <li>🎯 <strong>Context-Aware:</strong> Considers products, domains (first 5 TLDs), categories, and discounts</li>
-                <li>💰 <strong>Discount Integration:</strong> "Enjoy 20% off on hosting plans" or "Save Ksh 200 on .COM domains"</li>
-                <li>🎨 <strong>Black Friday CTAs:</strong> Special call-to-actions for Black Friday deals</li>
-                <li>📝 <strong>Fallback Priority:</strong> Custom JSON → WHMCS description → Auto-generated</li>
+                <li>🐛 <strong>CRITICAL FIX: Second-Level Domains:</strong> .co.ke, .co.uk domains now display correctly (was showing .ke, .uk)</li>
+                <li>🎨 <strong>Redesigned Filter Tabs:</strong> Oval/pill-shaped tabs with subtle gradient borders</li>
+                <li>🎯 <strong>Smart Tab Display:</strong> Only shows filter tabs that have active promos</li>
+                <li>📏 <strong>Better Spacing:</strong> Increased spacing between filters and cards for cleaner layout</li>
+                <li>📱 <strong>Enhanced Mobile UX:</strong> Smaller, more tap-friendly filter buttons on mobile</li>
+                <li>🔍 <strong>Second-Level TLD Support:</strong> Properly handles Kenya (.co.ke, .ac.ke), UK (.co.uk), South Africa (.co.za), Australia (.com.au), etc.</li>
+            </ul>
+            <p style="margin-top:10px;"><strong>v9.9.6 Features Still Included:</strong></p>
+            <ul style="margin:5px 0 0 20px;">
+                <li>✅ Auto-generated descriptions | Context-aware copy | Discount integration</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.5 Features Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
@@ -833,12 +838,14 @@ function whx_get_category_page($categories, $tld_labels = []) {
         $normalized_cats[$key_lower] = $value; // Keep original too
     }
 
-    // Domains
+    // Domains (v9.9.7: Fixed second-level domain detection)
     if (!empty($normalized_cats['domain'])) {
         if (count($tld_labels) === 1) {
-            $tld = strtolower(trim($tld_labels[0], '.'));
+            // Use ltrim (not trim) to preserve second-level domains like "co.ke"
+            $tld = strtolower(ltrim($tld_labels[0], '.'));
 
-            if ($tld === 'ke' || $tld === 'co.ke' || $tld === 'ac.ke') {
+            // Check for .ke domains (including second-level like co.ke, ac.ke)
+            if ($tld === 'ke' || $tld === 'co.ke' || $tld === 'ac.ke' || $tld === 'or.ke') {
                 return $routes['domains_ke'];
             }
 
@@ -1081,9 +1088,10 @@ function whx_generate_promo_link($code, $metadata, $categories, $has_domains, $d
     $market_url = whx_market_url();
     $cart_base = function_exists('whx_market_cart_base') ? whx_market_cart_base() : $market_url . $routes['whmcs_cart'];
     
-    // Convert TLD labels to clean keys
+    // Convert TLD labels to clean keys (v9.9.7: properly handle second-level domains)
     $tld_keys = [];
     foreach ($tld_labels as $label) {
+        // Remove ONLY the leading dot, preserve dots in second-level domains
         $tld_keys[] = ltrim(strtolower($label), '.');
     }
     
@@ -2014,27 +2022,59 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                     $categories = array_merge($categories, $product_categories);
                 }
             } else {
-                // It's potentially a TLD - extract ONLY the TLD part!
-                // Examples: "com" → "com", ".com" → "com", "d.com" → "com", "moneyspace.d.com" → "com"
-                
-                $tok = ltrim($token, '.');  // Remove leading dot
-                
-                // If token contains dots (like "d.com" or "moneyspace.d.com"), get the LAST part
-                if (strpos($tok, '.') !== false) {
-                    $parts = explode('.', $tok);
-                    $tok = end($parts); // Get last part = actual TLD
-                    
+                // It's potentially a TLD - properly handle second-level domains!
+                // Examples: "com" → "com", ".com" → "com", ".co.ke" → "co.ke"
+                // But reject: "d.com" → "com", "moneyspace.d.com" → "com"
+
+                $tok = ltrim($token, '.');  // Remove leading dot only
+                $tok_lower = strtolower(trim($tok));
+
+                // Known second-level domains (country code TLDs)
+                $second_level_tlds = [
+                    'co.ke', 'ac.ke', 'or.ke', 'ne.ke', 'go.ke', 'sc.ke', // Kenya
+                    'co.uk', 'ac.uk', 'gov.uk', 'org.uk', // UK
+                    'co.za', 'ac.za', 'gov.za', 'org.za', // South Africa
+                    'com.au', 'net.au', 'org.au', 'gov.au', // Australia
+                    'co.nz', 'ac.nz', 'govt.nz', 'org.nz', // New Zealand
+                    'co.in', 'net.in', 'org.in', 'gen.in', // India
+                ];
+
+                // Check if it's a known second-level domain
+                if (in_array($tok_lower, $second_level_tlds)) {
+                    // Keep as-is - it's a valid second-level domain
+                    whx_promo_debug("✓ Detected second-level domain for $code", [
+                        'original_token' => $token,
+                        'tld' => $tok_lower
+                    ]);
+                }
+                // If token contains dots and is NOT a known second-level domain, extract last part
+                elseif (strpos($tok_lower, '.') !== false) {
+                    // Likely garbage like "d.com" or "ae.com" - extract actual TLD
+                    $parts = explode('.', $tok_lower);
+
+                    // Check if second-to-last + last forms a second-level domain
+                    if (count($parts) >= 2) {
+                        $potential_second_level = $parts[count($parts)-2] . '.' . $parts[count($parts)-1];
+                        if (in_array($potential_second_level, $second_level_tlds)) {
+                            $tok_lower = $potential_second_level;
+                        } else {
+                            $tok_lower = end($parts); // Get last part = actual TLD
+                        }
+                    } else {
+                        $tok_lower = end($parts);
+                    }
+
                     whx_promo_debug("Extracted TLD from dotted token for $code", [
                         'original_token' => $token,
-                        'extracted_tld' => $tok
+                        'extracted_tld' => $tok_lower
                     ]);
                 }
                 
-                $tok_lower = strtolower(trim($tok));
-                
-                // ✅ v9.9 FIX: Validate ACTUAL TLD (not compound strings!)
-                // Valid TLD: 2+ chars, alphabetic, NO DOTS
-                if (strlen($tok_lower) >= 2 && ctype_alpha($tok_lower) && strpos($tok_lower, '.') === false) {
+                // ✅ v9.9.7 FIX: Validate TLD (including second-level domains)
+                // Valid TLD: 2+ chars, alphabetic (dots allowed for second-level domains)
+                $is_valid_tld = strlen($tok_lower) >= 2 && preg_match('/^[a-z]+(\.[a-z]+)?$/', $tok_lower);
+
+                if ($is_valid_tld) {
                     // Check if in WHMCS pricing for label
                     if (isset($tlds_map[$tok_lower])) {
                         $label = $tlds_map[$tok_lower]['label'];
@@ -2314,7 +2354,45 @@ function whx_whmcs_promos_shortcode_v9($atts) {
     }
 
     // ========================================================================
-    // HTML OUTPUT - v9.9.4 INSTANT FILTER TABS
+    // v9.9.7: COUNT ACTIVE PROMOS PER CATEGORY (for smart tab display)
+    // ========================================================================
+    $category_counts = [
+        'all' => 0,
+        'domains' => 0,
+        'hosting' => 0,
+        'ssl' => 0,
+        'vps' => 0,
+        'email' => 0,
+        'black-friday' => 0,
+        'top-deals' => 0,
+    ];
+
+    foreach ($items as $item) {
+        if ($item['is_expired']) continue; // Don't count expired promos
+
+        // Count for "All"
+        $category_counts['all']++;
+
+        // Count for specific categories
+        foreach ($item['all_categories'] as $cat) {
+            if (isset($category_counts[$cat])) {
+                $category_counts[$cat]++;
+            }
+        }
+
+        // Count Black Friday
+        if ($item['is_black_friday']) {
+            $category_counts['black-friday']++;
+        }
+
+        // Count Top Deals (≥40% discount)
+        if ($item['discount_val'] >= 40) {
+            $category_counts['top-deals']++;
+        }
+    }
+
+    // ========================================================================
+    // HTML OUTPUT - v9.9.7 SMART FILTER TABS
     // ========================================================================
 
     ob_start();
@@ -2322,33 +2400,33 @@ function whx_whmcs_promos_shortcode_v9($atts) {
     <section class="whx-promo-archive" role="region" aria-label="Promotional Offers">
 
         <?php if ($settings['filters']['enable_filters']): ?>
-            <!-- INSTANT FILTER TABS -->
+            <!-- INSTANT FILTER TABS (Only show tabs with active promos) -->
             <div class="whx-filter-tabs" role="tablist">
-                <?php if ($settings['filters']['show_all_tab']): ?>
+                <?php if ($settings['filters']['show_all_tab'] && $category_counts['all'] > 0): ?>
                     <button class="whx-filter-tab whx-filter-tab--active" data-filter="all" role="tab">All Offers</button>
                 <?php endif; ?>
 
-                <?php if ($settings['filters']['show_domains_tab']): ?>
+                <?php if ($settings['filters']['show_domains_tab'] && $category_counts['domains'] > 0): ?>
                     <button class="whx-filter-tab" data-filter="domains" role="tab">Domains</button>
                 <?php endif; ?>
 
-                <?php if ($settings['filters']['show_hosting_tab']): ?>
+                <?php if ($settings['filters']['show_hosting_tab'] && $category_counts['hosting'] > 0): ?>
                     <button class="whx-filter-tab" data-filter="hosting" role="tab">Hosting</button>
                 <?php endif; ?>
 
-                <?php if ($settings['filters']['show_ssl_tab']): ?>
+                <?php if ($settings['filters']['show_ssl_tab'] && $category_counts['ssl'] > 0): ?>
                     <button class="whx-filter-tab" data-filter="ssl" role="tab">SSL</button>
                 <?php endif; ?>
 
-                <?php if ($settings['filters']['show_vps_tab']): ?>
+                <?php if ($settings['filters']['show_vps_tab'] && $category_counts['vps'] > 0): ?>
                     <button class="whx-filter-tab" data-filter="vps" role="tab">VPS</button>
                 <?php endif; ?>
 
-                <?php if ($settings['filters']['show_email_tab']): ?>
+                <?php if ($settings['filters']['show_email_tab'] && $category_counts['email'] > 0): ?>
                     <button class="whx-filter-tab" data-filter="email" role="tab">Email</button>
                 <?php endif; ?>
 
-                <?php if ($settings['filters']['show_black_friday_tab']): ?>
+                <?php if ($settings['filters']['show_black_friday_tab'] && $category_counts['black-friday'] > 0): ?>
                     <button class="whx-filter-tab" data-filter="black-friday" role="tab">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
@@ -2358,7 +2436,7 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                     </button>
                 <?php endif; ?>
 
-                <?php if ($settings['filters']['show_highest_discount_tab']): ?>
+                <?php if ($settings['filters']['show_highest_discount_tab'] && $category_counts['top-deals'] > 0): ?>
                     <button class="whx-filter-tab" data-filter="top-deals" role="tab">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
