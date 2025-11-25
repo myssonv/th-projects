@@ -3,7 +3,7 @@
  * WHX PROMO CARDS PRO - COMPLETE FUNCTIONS
  * ============================================================================
  * 
- * Version: 9.9.8.5 - Promo Token Analysis Panel
+ * Version: 9.9.8.6 - FIXED: Strip WHMCS "D." Prefix
  * Author: WHX Development Team
  *
  * CHANGES IN v9.9.3:
@@ -694,13 +694,13 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.8.5 - Promo Token Analysis Panel</p>
-            <p><strong>🔍 NEW IN v9.9.8.5:</strong></p>
+            <p><strong>Version:</strong> 9.9.8.6 - FIXED: Strip WHMCS "D." Prefix</p>
+            <p><strong>✅ CRITICAL FIX v9.9.8.6:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>📊 <strong>Promo Tokens Analysis:</strong> New debug panel shows raw tokens from WHMCS promos</li>
-                <li>🎯 <strong>Color-Coded Diagnostics:</strong> Green (exact match), Orange (will extract), Red (problem tokens)</li>
-                <li>🔬 <strong>Token-by-Token Analysis:</strong> See exactly why each token matches/extracts/fails</li>
-                <li>💡 <strong>Problem Identification:</strong> Instantly identifies tokens causing .co.ke → .ke issues</li>
+                <li>🎯 <strong>FIXED: D.co.ke → .co.ke</strong> Now correctly strips WHMCS "D." prefix from domain tokens</li>
+                <li>✅ <strong>Second-Level Domains Work!</strong> D.co.ke, D.com.au, D.co.uk all recognized correctly</li>
+                <li>🔧 <strong>Root Cause Fixed:</strong> WHMCS adds "D." prefix to all domain TLDs - now stripped before matching</li>
+                <li>📊 <strong>Debug Panel:</strong> Token analysis now shows GREEN (exact match) instead of ORANGE (extract)</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.8.1 Fixes Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
@@ -2240,6 +2240,12 @@ function whx_whmcs_promos_shortcode_v9($atts) {
 
                 $tok = ltrim($token, '.');  // Remove leading dot
                 $tok_lower = strtolower(trim($tok));
+
+                // v9.9.8.6: Strip WHMCS garbage "D." prefix (D.co.ke → co.ke, D.com → com)
+                // WHMCS adds "D." to domain TLDs in appliesto field
+                if (preg_match('/^d\./i', $tok_lower)) {
+                    $tok_lower = substr($tok_lower, 2); // Remove "D."
+                }
 
                 // Try exact match first
                 if (isset($tlds_map[$tok_lower])) {
