@@ -1,9 +1,9 @@
 /**
  * WHX PROMO CARDS - INDUSTRY STANDARD COLORS
- * Version: 9.9.1 ENHANCED - Black Friday Special + Mobile-First
+ * Version: 9.9.4 - Instant Filter Tabs
  *
- * Compatible with v9.9.1 Functions
- * Features: Black Friday gold styling, mobile-optimized, search icon improvements
+ * Compatible with v9.9.4 Functions
+ * Features: Instant filter tabs, Black Friday gold styling, mobile-optimized, smooth animations
  * Copy this entire file to your WordPress Additional CSS or theme stylesheet
  */
 
@@ -17,6 +17,70 @@
 .whx-promo-archive{
     margin:2rem 0;
     padding:0 20px;
+}
+
+/* ============================================================================
+   INSTANT FILTER TABS - v9.9.4
+   ============================================================================ */
+.whx-filter-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.75rem;
+    margin-bottom:2rem;
+    padding:0;
+    justify-content:center;
+}
+
+.whx-filter-tab{
+    display:inline-flex;
+    align-items:center;
+    gap:0.5rem;
+    padding:0.625rem 1.25rem;
+    font-size:0.9rem;
+    font-weight:600;
+    color:#64748b;
+    background:#f8fafc;
+    border:2px solid #e2e8f0;
+    border-radius:8px;
+    cursor:pointer;
+    transition:all 0.2s ease;
+    white-space:nowrap;
+}
+
+.whx-filter-tab:hover{
+    color:#334155;
+    background:#f1f5f9;
+    border-color:#cbd5e1;
+    transform:translateY(-2px);
+}
+
+.whx-filter-tab--active{
+    color:#fff;
+    background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);
+    border-color:#2563eb;
+    box-shadow:0 4px 12px rgba(37,99,235,0.3);
+}
+
+.whx-filter-tab--active:hover{
+    background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+    transform:translateY(-2px);
+}
+
+.whx-filter-tab svg{
+    flex-shrink:0;
+}
+
+/* Mobile responsiveness for filter tabs */
+@media (max-width:640px){
+    .whx-filter-tabs{
+        gap:0.5rem;
+        margin-bottom:1.5rem;
+    }
+
+    .whx-filter-tab{
+        padding:0.5rem 1rem;
+        font-size:0.85rem;
+    }
 }
 
 /* FULLY RESPONSIVE GRID */
@@ -64,9 +128,10 @@
     background:linear-gradient(135deg,#1e293b 0%,#334155 100%) !important;
     border-radius:16px;
     overflow:hidden;
-    transition:all .3s cubic-bezier(.4,0,.2,1);
+    transition:all .3s cubic-bezier(.4,0,.2,1), opacity 0.2s ease, transform 0.2s ease;
     box-shadow:0 4px 20px rgba(0,0,0,.15);
     position:relative;
+    opacity:1;
 }
 
 .whx-promo-card:hover{

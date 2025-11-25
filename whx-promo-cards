@@ -140,6 +140,19 @@ function whx_promo_get_default_settings() {
             'show_pricing' => true,
             'show_domain_pricing' => true,
         ],
+
+        // Filter Tabs Configuration
+        'filters' => [
+            'enable_filters' => true,
+            'show_all_tab' => true,
+            'show_domains_tab' => true,
+            'show_hosting_tab' => true,
+            'show_ssl_tab' => true,
+            'show_vps_tab' => true,
+            'show_email_tab' => true,
+            'show_black_friday_tab' => true,
+            'show_highest_discount_tab' => true,
+        ],
     ];
 }
 
@@ -210,7 +223,20 @@ function whx_promo_settings_page() {
             $settings['pricing']['show_domain_pricing'] = isset($_POST['pricing']['show_domain_pricing']);
             $settings['pricing']['preferred_cycle'] = sanitize_text_field($_POST['pricing']['preferred_cycle']);
         }
-        
+
+        // Save Filter Settings
+        if (isset($_POST['filters'])) {
+            $settings['filters']['enable_filters'] = isset($_POST['filters']['enable_filters']);
+            $settings['filters']['show_all_tab'] = isset($_POST['filters']['show_all_tab']);
+            $settings['filters']['show_domains_tab'] = isset($_POST['filters']['show_domains_tab']);
+            $settings['filters']['show_hosting_tab'] = isset($_POST['filters']['show_hosting_tab']);
+            $settings['filters']['show_ssl_tab'] = isset($_POST['filters']['show_ssl_tab']);
+            $settings['filters']['show_vps_tab'] = isset($_POST['filters']['show_vps_tab']);
+            $settings['filters']['show_email_tab'] = isset($_POST['filters']['show_email_tab']);
+            $settings['filters']['show_black_friday_tab'] = isset($_POST['filters']['show_black_friday_tab']);
+            $settings['filters']['show_highest_discount_tab'] = isset($_POST['filters']['show_highest_discount_tab']);
+        }
+
         update_option('whx_promo_settings', $settings);
         whx_clear_promo_cache();
         
@@ -221,7 +247,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.3</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.4</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -438,31 +464,65 @@ function whx_promo_settings_page() {
                     </tr>
                 </table>
             </div>
-            
+
+            <!-- FILTER TABS SETTINGS SECTION -->
+            <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                <h2>🎯 Filter Tabs (Instant Filtering)</h2>
+                <p class="description">Enable instant filter tabs above promo cards for quick filtering by category or special offers.</p>
+                <table class="form-table">
+                    <tr>
+                        <th style="width:250px;">Enable Filter Tabs</th>
+                        <td>
+                            <label><input type="checkbox" name="filters[enable_filters]" <?php checked($settings['filters']['enable_filters']); ?>> Show filter tabs above promo cards</label>
+                            <p class="description">Allows users to instantly filter promos by category</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Visible Filter Tabs</th>
+                        <td>
+                            <label style="display:block;margin:5px 0;"><input type="checkbox" name="filters[show_all_tab]" <?php checked($settings['filters']['show_all_tab']); ?>> "All Offers" Tab (shows all promos)</label>
+                            <label style="display:block;margin:5px 0;"><input type="checkbox" name="filters[show_domains_tab]" <?php checked($settings['filters']['show_domains_tab']); ?>> "Domains" Tab</label>
+                            <label style="display:block;margin:5px 0;"><input type="checkbox" name="filters[show_hosting_tab]" <?php checked($settings['filters']['show_hosting_tab']); ?>> "Hosting" Tab</label>
+                            <label style="display:block;margin:5px 0;"><input type="checkbox" name="filters[show_ssl_tab]" <?php checked($settings['filters']['show_ssl_tab']); ?>> "SSL" Tab</label>
+                            <label style="display:block;margin:5px 0;"><input type="checkbox" name="filters[show_vps_tab]" <?php checked($settings['filters']['show_vps_tab']); ?>> "VPS" Tab</label>
+                            <label style="display:block;margin:5px 0;"><input type="checkbox" name="filters[show_email_tab]" <?php checked($settings['filters']['show_email_tab']); ?>> "Email" Tab</label>
+                            <label style="display:block;margin:5px 0;"><input type="checkbox" name="filters[show_black_friday_tab]" <?php checked($settings['filters']['show_black_friday_tab']); ?>> "Black Friday" Tab (special deals)</label>
+                            <label style="display:block;margin:5px 0;"><input type="checkbox" name="filters[show_highest_discount_tab]" <?php checked($settings['filters']['show_highest_discount_tab']); ?>> "Top Deals" Tab (highest discounts ≥ 40%)</label>
+                            <p class="description">Choose which filter tabs to show. Uncheck tabs you don't need.</p>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
             <?php submit_button('💾 Save All Settings', 'primary large', 'whx_promo_save_settings'); ?>
         </form>
         
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.3 - Critical Bug Fixes & Stability</p>
-            <p><strong>What's New in v9.9.3:</strong></p>
+            <p><strong>Version:</strong> 9.9.4 - Instant Filter Tabs</p>
+            <p><strong>What's New in v9.9.4:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🐛 <strong>JSON Whitespace Fixed:</strong> Leading/trailing spaces no longer break JSON (" Email" works!)</li>
-                <li>📧 <strong>Case-Insensitive Routing:</strong> "Emails" and "email" both route correctly to /hosting/email</li>
-                <li>🔤 <strong>Plural Forms Support:</strong> "Emails", "Domains", etc. auto-convert to singular</li>
-                <li>✏️ <strong>Title Grammar Fixed:</strong> No more "Get 5% Off off" - now "Get 5% off"</li>
-                <li>➕ <strong>Better List Formatting:</strong> "SSL, Reseller & Windows" (adds & before last item)</li>
-                <li>💰 <strong>One-Time Products:</strong> Show "one-time" instead of misleading "/mo"</li>
+                <li>🎯 <strong>Instant Filter Tabs:</strong> Filter promos by Domains, Hosting, SSL, VPS, Email - no page reload!</li>
+                <li>⚡ <strong>Black Friday Filter:</strong> Quick access to special Black Friday deals</li>
+                <li>🔥 <strong>Top Deals Filter:</strong> See highest discounts (≥40%) at a glance</li>
+                <li>⚙️ <strong>Customizable Tabs:</strong> Control which filter tabs show in settings</li>
+                <li>📱 <strong>Mobile-Friendly:</strong> Responsive filter tabs that work perfectly on all devices</li>
+                <li>✨ <strong>Smooth Animations:</strong> Cards fade in/out beautifully when filtering</li>
             </ul>
-            <p style="margin-top:10px;"><strong>All Previous Features Still Work:</strong></p>
+            <p style="margin-top:10px;"><strong>v9.9.3 Fixes Still Included:</strong></p>
+            <ul style="margin:5px 0 0 20px;">
+                <li>✅ JSON whitespace handling | Case-insensitive routing | Plural forms support</li>
+                <li>✅ Title grammar fixes | One-time product labels | Better list formatting</li>
+            </ul>
+            <p style="margin-top:10px;"><strong>All Previous Features:</strong></p>
             <ul style="margin:5px 0 0 20px;">
                 <li>✅ W3 Total Cache integration | Multi-product → /start</li>
                 <li>✅ Black Friday dark+gold styling | Products metadata</li>
                 <li>✅ Price override labels | Domain search in new tab</li>
                 <li>✅ Documentation tab | Mobile-first design</li>
             </ul>
-            <p style="margin-top:10px;"><strong>🎯 Pro Tip:</strong> JSON is now more forgiving! Spaces in category names won't break routing anymore.</p>
+            <p style="margin-top:10px;"><strong>🎯 Pro Tip:</strong> Enable filter tabs in settings to let users quickly find specific offer types!</p>
         </div>
         
         <!-- WORDPRESS BRIDGE SCRIPT -->
@@ -2122,12 +2182,61 @@ function whx_whmcs_promos_shortcode_v9($atts) {
     }
 
     // ========================================================================
-    // HTML OUTPUT - v9.6.0 CLEAN TLDS
+    // HTML OUTPUT - v9.9.4 INSTANT FILTER TABS
     // ========================================================================
-    
+
     ob_start();
     ?>
     <section class="whx-promo-archive" role="region" aria-label="Promotional Offers">
+
+        <?php if ($settings['filters']['enable_filters']): ?>
+            <!-- INSTANT FILTER TABS -->
+            <div class="whx-filter-tabs" role="tablist">
+                <?php if ($settings['filters']['show_all_tab']): ?>
+                    <button class="whx-filter-tab whx-filter-tab--active" data-filter="all" role="tab">All Offers</button>
+                <?php endif; ?>
+
+                <?php if ($settings['filters']['show_domains_tab']): ?>
+                    <button class="whx-filter-tab" data-filter="domains" role="tab">Domains</button>
+                <?php endif; ?>
+
+                <?php if ($settings['filters']['show_hosting_tab']): ?>
+                    <button class="whx-filter-tab" data-filter="hosting" role="tab">Hosting</button>
+                <?php endif; ?>
+
+                <?php if ($settings['filters']['show_ssl_tab']): ?>
+                    <button class="whx-filter-tab" data-filter="ssl" role="tab">SSL</button>
+                <?php endif; ?>
+
+                <?php if ($settings['filters']['show_vps_tab']): ?>
+                    <button class="whx-filter-tab" data-filter="vps" role="tab">VPS</button>
+                <?php endif; ?>
+
+                <?php if ($settings['filters']['show_email_tab']): ?>
+                    <button class="whx-filter-tab" data-filter="email" role="tab">Email</button>
+                <?php endif; ?>
+
+                <?php if ($settings['filters']['show_black_friday_tab']): ?>
+                    <button class="whx-filter-tab" data-filter="black-friday" role="tab">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                        </svg>
+                        Black Friday
+                    </button>
+                <?php endif; ?>
+
+                <?php if ($settings['filters']['show_highest_discount_tab']): ?>
+                    <button class="whx-filter-tab" data-filter="top-deals" role="tab">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                        </svg>
+                        Top Deals
+                    </button>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
         <div class="whx-promo-grid">
             <?php foreach ($items as $item):
                 $card_classes = ['whx-promo-card'];
@@ -2149,11 +2258,13 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                     }
                 }
             ?>
-            <article class="<?php echo implode(' ', $card_classes); ?>" 
+            <article class="<?php echo implode(' ', $card_classes); ?>"
                      data-category="<?php echo esc_attr(strtolower($item['cat_label'])); ?>"
                      data-domain-only="<?php echo $item['domain_only'] ? '1' : '0'; ?>"
                      data-show-search="<?php echo $item['show_domain_search'] ? '1' : '0'; ?>"
                      data-tld="<?php echo esc_attr($item['tld_for_search']); ?>"
+                     data-discount-value="<?php echo esc_attr($item['discount_val']); ?>"
+                     data-is-black-friday="<?php echo ($item['is_black_friday'] && !$item['is_expired']) ? '1' : '0'; ?>"
                      itemscope itemtype="https://schema.org/Offer">
                 
                 <!-- CARD HEADER SECTION -->
@@ -2433,6 +2544,68 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                 }
             }
         })();
+
+        // ========================================================================
+        // v9.9.4: INSTANT FILTER TABS
+        // Filters promo cards by category, Black Friday, or highest discounts
+        // ========================================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            var filterTabs = document.querySelectorAll('.whx-filter-tab');
+            var promoCards = document.querySelectorAll('.whx-promo-card');
+
+            if (filterTabs.length === 0 || promoCards.length === 0) return;
+
+            filterTabs.forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    var filter = tab.getAttribute('data-filter');
+
+                    // Update active tab
+                    filterTabs.forEach(function(t) {
+                        t.classList.remove('whx-filter-tab--active');
+                    });
+                    tab.classList.add('whx-filter-tab--active');
+
+                    // Filter cards
+                    promoCards.forEach(function(card) {
+                        var category = card.getAttribute('data-category');
+                        var discountVal = parseFloat(card.getAttribute('data-discount-value')) || 0;
+                        var isBlackFriday = card.getAttribute('data-is-black-friday') === '1';
+                        var isExpired = card.classList.contains('whx-promo-card--expired');
+
+                        var shouldShow = false;
+
+                        if (filter === 'all') {
+                            shouldShow = !isExpired;
+                        } else if (filter === 'black-friday') {
+                            shouldShow = isBlackFriday && !isExpired;
+                        } else if (filter === 'top-deals') {
+                            shouldShow = discountVal >= 40 && !isExpired;
+                        } else {
+                            // Category filter (domains, hosting, ssl, vps, email)
+                            shouldShow = category === filter && !isExpired;
+                        }
+
+                        // Show/hide with animation
+                        if (shouldShow) {
+                            card.style.display = 'flex';
+                            // Trigger reflow for animation
+                            setTimeout(function() {
+                                card.style.opacity = '1';
+                                card.style.transform = 'scale(1)';
+                            }, 10);
+                        } else {
+                            card.style.opacity = '0';
+                            card.style.transform = 'scale(0.95)';
+                            setTimeout(function() {
+                                card.style.display = 'none';
+                            }, 200);
+                        }
+                    });
+
+                    console.log('[WHX v9.9.4] Filter applied:', filter);
+                });
+            });
+        });
     })();
     </script>
     <?php
