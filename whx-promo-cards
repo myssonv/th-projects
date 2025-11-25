@@ -3,7 +3,7 @@
  * WHX PROMO CARDS PRO - COMPLETE FUNCTIONS
  * ============================================================================
  * 
- * Version: 9.9.8.6 - FIXED: Strip WHMCS "D." Prefix
+ * Version: 9.9.8.7 - Smart Cache Management & Cloudflare Integration
  * Author: WHX Development Team
  *
  * CHANGES IN v9.9.3:
@@ -34,8 +34,11 @@ if (!defined('ABSPATH')) {
 }
 
 // ============================================================================
-// CONFIGURATION: DEBUG MODE
+// CONFIGURATION: VERSION & DEBUG MODE
 // ============================================================================
+// v9.9.8.7: Version-based cache keys ensure fresh data after updates
+define('WHX_PROMO_VERSION', '9.9.8.7');
+
 // Set to false in production to disable debug logging
 define('WHX_PROMO_DEBUG', true);
 
@@ -132,7 +135,13 @@ function whx_promo_get_default_settings() {
             'products_ttl' => 30,
             'tlds_ttl' => 30,
         ],
-        
+
+        // v9.9.8.7: Cloudflare Integration
+        'cloudflare' => [
+            'api_token' => '', // Cloudflare API Token
+            'zone_id' => '',   // Cloudflare Zone ID
+        ],
+
         // Pricing Configuration
         'pricing' => [
             'auto_detect' => true,
@@ -215,7 +224,13 @@ function whx_promo_settings_page() {
             $settings['cache']['products_ttl'] = absint($_POST['cache']['products_ttl']);
             $settings['cache']['tlds_ttl'] = absint($_POST['cache']['tlds_ttl']);
         }
-        
+
+        // v9.9.8.7: Save Cloudflare Settings
+        if (isset($_POST['cloudflare'])) {
+            $settings['cloudflare']['api_token'] = sanitize_text_field($_POST['cloudflare']['api_token']);
+            $settings['cloudflare']['zone_id'] = sanitize_text_field($_POST['cloudflare']['zone_id']);
+        }
+
         // Save Pricing Settings
         if (isset($_POST['pricing'])) {
             $settings['pricing']['auto_detect'] = isset($_POST['pricing']['auto_detect']);
@@ -247,7 +262,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.8.4</h1>
+        <h1>🎟️ WHX Promo Cards - v<?php echo WHX_PROMO_VERSION; ?></h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -258,12 +273,54 @@ function whx_promo_settings_page() {
         <!-- CACHE MANAGEMENT SECTION -->
         <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
             <h2>⚡ Cache Management</h2>
-            <p class="description">Clear the promo cache to see changes immediately.</p>
+            <p class="description">Version-based caching ensures fresh data after code updates. Clear all caches if changes don't appear.</p>
+
+            <?php
+            $last_cleared = get_option('whx_promo_cache_cleared');
+            $cache_status_class = $settings['cache']['enable_cache'] ? 'color:#10b981;' : 'color:#94a3b8;';
+            $cf_configured = !empty($settings['cloudflare']['api_token']) && !empty($settings['cloudflare']['zone_id']);
+            ?>
+
+            <div style="background:#f8fafc;padding:15px;border-radius:6px;margin:15px 0;">
+                <table style="width:100%;font-size:13px;">
+                    <tr>
+                        <td style="padding:5px 0;"><strong>Code Version:</strong></td>
+                        <td style="padding:5px 0;<?php echo $cache_status_class; ?>">v<?php echo WHX_PROMO_VERSION; ?></td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;"><strong>Cache Status:</strong></td>
+                        <td style="padding:5px 0;<?php echo $cache_status_class; ?>">
+                            <?php echo $settings['cache']['enable_cache'] ? '✓ Enabled' : '⊘ Disabled'; ?>
+                            <?php if ($settings['cache']['enable_cache']): ?>
+                                (<?php echo $settings['cache']['promos_ttl']; ?>min)
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;"><strong>Last Cleared:</strong></td>
+                        <td style="padding:5px 0;">
+                            <?php echo $last_cleared ? human_time_diff(strtotime($last_cleared), current_time('timestamp')) . ' ago' : 'Never'; ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:5px 0;"><strong>Cloudflare:</strong></td>
+                        <td style="padding:5px 0;color:<?php echo $cf_configured ? '#10b981' : '#f59e0b'; ?>;">
+                            <?php echo $cf_configured ? '✓ Configured' : '⚠️ Not Configured (see settings below)'; ?>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
             <div style="margin-top:15px;">
-                <button type="button" id="whx-clear-cache-btn" class="button button-secondary" data-nonce="<?php echo esc_attr($cache_nonce); ?>">
-                    🧹 Clear Cache Now
+                <button type="button" id="whx-clear-cache-btn" class="button button-primary" data-nonce="<?php echo esc_attr($cache_nonce); ?>">
+                    🧹 Clear All Caches (WordPress + W3TC + WP Rocket + Cloudflare)
                 </button>
                 <span id="whx-cache-message" style="margin-left:15px;font-weight:600;"></span>
+            </div>
+
+            <div style="margin-top:15px;padding:12px;background:#e7f3ff;border-left:4px solid #0891b2;border-radius:4px;font-size:13px;">
+                <strong>💡 Cache Strategy:</strong> Each code version uses unique cache keys. Updating to v9.9.8.7 automatically invalidates old cache.
+                Click "Clear All Caches" if changes don't appear after a few seconds.
             </div>
         </div>
 
@@ -566,7 +623,49 @@ function whx_promo_settings_page() {
                     </tr>
                 </table>
             </div>
-            
+
+            <!-- CLOUDFLARE SETTINGS SECTION -->
+            <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                <h2>☁️ Cloudflare Integration (Optional)</h2>
+                <p class="description">If using Cloudflare, configure API credentials to automatically purge edge cache when clearing WordPress cache.</p>
+
+                <div style="background:#e7f3ff;padding:12px;border-radius:5px;border-left:4px solid #0891b2;margin:15px 0;font-size:13px;">
+                    <strong>💡 How to get Cloudflare credentials:</strong><br>
+                    1. Go to Cloudflare dashboard → Your domain → Overview<br>
+                    2. Scroll down to find <strong>Zone ID</strong> (copy it)<br>
+                    3. Go to My Profile → API Tokens → Create Token<br>
+                    4. Use template: <strong>"Edit zone DNS"</strong> or create custom with <code>Zone.Cache Purge</code> permission<br>
+                    5. Paste both values below
+                </div>
+
+                <table class="form-table">
+                    <tr>
+                        <th style="width:250px;"><strong>Cloudflare Zone ID</strong></th>
+                        <td>
+                            <input type="text" name="cloudflare[zone_id]" value="<?php echo esc_attr($settings['cloudflare']['zone_id']); ?>" class="regular-text" placeholder="e.g., 1a2b3c4d5e6f7g8h9i0j">
+                            <p class="description">Found in Cloudflare dashboard → Your domain → Overview (right sidebar)</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><strong>Cloudflare API Token</strong></th>
+                        <td>
+                            <input type="password" name="cloudflare[api_token]" value="<?php echo esc_attr($settings['cloudflare']['api_token']); ?>" class="regular-text" placeholder="e.g., YQSn-xWAQiiEh9qM58wZNnyQS7FUdoqGIUAbrh7T">
+                            <p class="description">Create at: My Profile → API Tokens (needs <code>Zone.Cache Purge</code> permission)</p>
+                        </td>
+                    </tr>
+                </table>
+
+                <?php if ($cf_configured): ?>
+                    <div style="padding:12px;background:#d1fae5;border-left:4px solid #10b981;border-radius:4px;margin-top:15px;">
+                        <strong>✓ Cloudflare Configured!</strong> Cache will be automatically purged when you click "Clear All Caches" button.
+                    </div>
+                <?php else: ?>
+                    <div style="padding:12px;background:#fef3c7;border-left:4px solid #f59e0b;border-radius:4px;margin-top:15px;">
+                        <strong>⚠️ Optional:</strong> Leave empty if not using Cloudflare. WordPress & plugin caches will still be cleared.
+                    </div>
+                <?php endif; ?>
+            </div>
+
             <!-- PAGE ROUTES SECTION -->
             <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
                 <h2>🔗 Page Routes</h2>
@@ -694,13 +793,14 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.8.6 - FIXED: Strip WHMCS "D." Prefix</p>
-            <p><strong>✅ CRITICAL FIX v9.9.8.6:</strong></p>
+            <p><strong>Version:</strong> <?php echo WHX_PROMO_VERSION; ?> - Smart Cache Management</p>
+            <p><strong>🚀 NEW IN v9.9.8.7:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🎯 <strong>FIXED: D.co.ke → .co.ke</strong> Now correctly strips WHMCS "D." prefix from domain tokens</li>
-                <li>✅ <strong>Second-Level Domains Work!</strong> D.co.ke, D.com.au, D.co.uk all recognized correctly</li>
-                <li>🔧 <strong>Root Cause Fixed:</strong> WHMCS adds "D." prefix to all domain TLDs - now stripped before matching</li>
-                <li>📊 <strong>Debug Panel:</strong> Token analysis now shows GREEN (exact match) instead of ORANGE (extract)</li>
+                <li>⚡ <strong>Version-Based Cache Keys:</strong> Each code version uses unique cache - updates always fetch fresh data</li>
+                <li>☁️ <strong>Cloudflare Integration:</strong> Automatically purge Cloudflare edge cache when clearing WordPress cache</li>
+                <li>📊 <strong>Cache Status Display:</strong> See cache status, last cleared time, and Cloudflare config at a glance</li>
+                <li>🧹 <strong>Smart Cache Clearing:</strong> Clears WordPress transients + W3TC + WP Rocket + Cloudflare in one click</li>
+                <li>🔄 <strong>Auto-Invalidation:</strong> Old cache versions automatically discarded on code updates</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.8.1 Fixes Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
@@ -1490,8 +1590,9 @@ function whx_get_promos_v5() {
     if (!function_exists('whx_request')) return [];
     
     $settings = whx_promo_get_settings();
-    $key = 'whx_promos_v5';
-    
+    // v9.9.8.7: Version-based cache key ensures fresh data after code updates
+    $key = 'whx_promos_' . WHX_PROMO_VERSION;
+
     // Check cache (works with W3 Total Cache, WP Rocket, etc.)
     if ($settings['cache']['enable_cache']) {
         $cached = get_transient($key);
@@ -1545,9 +1646,10 @@ function whx_get_promos_v5() {
  */
 function whx_get_products_v5() {
     if (!function_exists('whx_request')) return [];
-    
+
     $settings = whx_promo_get_settings();
-    $key = 'whx_products_v5_batch';
+    // v9.9.8.7: Version-based cache key ensures fresh data after code updates
+    $key = 'whx_products_' . WHX_PROMO_VERSION;
     
     // Check cache (works with W3 Total Cache, WP Rocket, etc.)
     if ($settings['cache']['enable_cache']) {
@@ -1602,9 +1704,10 @@ function whx_get_products_v5() {
  */
 function whx_get_tlds_v5() {
     if (!function_exists('whx_request')) return [];
-    
+
     $settings = whx_promo_get_settings();
-    $key = 'whx_tlds_v5_gettldpricing';
+    // v9.9.8.7: Version-based cache key ensures fresh data after code updates
+    $key = 'whx_tlds_' . WHX_PROMO_VERSION;
     
     // Check cache (works with W3 Total Cache, WP Rocket, etc.)
     if ($settings['cache']['enable_cache']) {
@@ -3062,14 +3165,62 @@ function whx_whmcs_promos_shortcode_v9($atts) {
 // ============================================================================
 
 /**
+ * Purge Cloudflare Cache
+ * v9.9.8.7: Attempts to purge Cloudflare edge cache using CF API
+ */
+function whx_purge_cloudflare_cache() {
+    $settings = whx_promo_get_settings();
+
+    // Check if Cloudflare credentials are configured
+    if (empty($settings['cloudflare']['api_token']) || empty($settings['cloudflare']['zone_id'])) {
+        return ['success' => false, 'message' => 'Cloudflare API credentials not configured'];
+    }
+
+    $api_token = $settings['cloudflare']['api_token'];
+    $zone_id = $settings['cloudflare']['zone_id'];
+
+    // Purge everything (or specific URLs if needed)
+    $response = wp_remote_post("https://api.cloudflare.com/client/v4/zones/$zone_id/purge_cache", [
+        'headers' => [
+            'Authorization' => 'Bearer ' . $api_token,
+            'Content-Type' => 'application/json'
+        ],
+        'body' => json_encode(['purge_everything' => true]),
+        'timeout' => 15
+    ]);
+
+    if (is_wp_error($response)) {
+        return ['success' => false, 'message' => 'Cloudflare API error: ' . $response->get_error_message()];
+    }
+
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+
+    if (!empty($body['success'])) {
+        return ['success' => true, 'message' => 'Cloudflare cache purged'];
+    }
+
+    return ['success' => false, 'message' => 'Cloudflare API returned error'];
+}
+
+/**
  * Clear All Promo-Related Caches
- * v9.9.2: Added W3 Total Cache, WP Super Cache, and WP Rocket support
+ * v9.9.8.7: Version-based cache clearing + Cloudflare purge
  */
 function whx_clear_promo_cache() {
-    // Clear WordPress transients
-    delete_transient('whx_promos_v5');
-    delete_transient('whx_products_v5_batch');
-    delete_transient('whx_tlds_v5_gettldpricing');
+    global $wpdb;
+
+    // Clear current version transients
+    delete_transient('whx_promos_' . WHX_PROMO_VERSION);
+    delete_transient('whx_products_' . WHX_PROMO_VERSION);
+    delete_transient('whx_tlds_' . WHX_PROMO_VERSION);
+
+    // Clear old version transients (wildcard delete)
+    $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_whx_promos_%' OR option_name LIKE '_transient_timeout_whx_promos_%'");
+    $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_whx_products_%' OR option_name LIKE '_transient_timeout_whx_products_%'");
+    $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_whx_tlds_%' OR option_name LIKE '_transient_timeout_whx_tlds_%'");
+
+    // Store cache clear timestamp
+    update_option('whx_promo_cache_cleared', current_time('mysql'));
 
     // Clear W3 Total Cache
     if (function_exists('w3tc_flush_all')) {
@@ -3095,7 +3246,15 @@ function whx_clear_promo_cache() {
         whx_promo_debug("✓ LiteSpeed Cache cleared");
     }
 
-    whx_promo_debug("Cache cleared successfully");
+    // v9.9.8.7: Attempt Cloudflare cache purge
+    $cf_result = whx_purge_cloudflare_cache();
+    if ($cf_result['success']) {
+        whx_promo_debug("✓ Cloudflare cache cleared");
+    } elseif (!empty($cf_result['message'])) {
+        whx_promo_debug("⚠️ Cloudflare: " . $cf_result['message']);
+    }
+
+    whx_promo_debug("Cache cleared successfully at " . current_time('mysql'));
 }
 
 /**
