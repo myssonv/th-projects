@@ -3,18 +3,21 @@
  * WHX PROMO CARDS PRO - COMPLETE FUNCTIONS
  * ============================================================================
  * 
- * Version: 9.9.1 ENHANCED - UX & Performance Release
+ * Version: 9.9.2 - Cache & URL Routing Fixes
  * Author: WHX Development Team
  *
- * CHANGES IN v9.9.1:
- * ✓ FIXED: Discount labels (price override shows actual price, not "Special Offer")
- * ✓ FIXED: Semantic improvements ("Save Ksh 200" not "Save for Ksh 200")
- * ✓ FIXED: Domain search opens in new tab (like other buttons)
- * ✓ FIXED: Domain search placeholder (smart placeholder based on TLD count)
- * ✓ NEW: Black Friday special styling (dark + gold, auto-detects BF codes)
- * ✓ NEW: Documentation tab with shortcode examples & easy copy
- * ✓ IMPROVED: Title generation for different discount types
- * ✓ IMPROVED: Better price display & caching performance
+ * CHANGES IN v9.9.2:
+ * ✓ FIXED: W3 Total Cache integration (auto-clears W3TC, WP Rocket, WP Super Cache, LiteSpeed)
+ * ✓ FIXED: Multi-product codes now default to /start with promocode persistence
+ * ✓ FIXED: URL routing respects settings routes (email → /hosting/email works now!)
+ * ✓ NEW: Products metadata attribute for custom multi-product titles
+ * ✓ NEW: "Get 20% off our SSL, Reseller, Windows Hosting" style titles
+ * ✓ IMPROVED: Cache clearing documentation with W3TC specific instructions
+ *
+ * Previous v9.9.1 Features:
+ * ✓ Black Friday dark+gold styling | Products metadata titles
+ * ✓ Price override labels | Domain search in new tab
+ * ✓ Documentation tab with copy buttons
  * 
  * Installation: Replace entire WHX Promo Cards code with this file
  * Requirements: WHX WHMCS Core plugin active
@@ -42,7 +45,7 @@ define('WHX_PROMO_DEBUG', true);
 function whx_promo_debug($message, $data = null) {
     if (!WHX_PROMO_DEBUG || !current_user_can('manage_options')) return;
 
-    $log = '[WHX PROMO v9.9.1] ' . $message;
+    $log = '[WHX PROMO v9.9.2] ' . $message;
     if ($data !== null) {
         $log .= ' | Data: ' . print_r($data, true);
     }
@@ -217,7 +220,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.1 ENHANCED</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.2</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -289,12 +292,21 @@ function whx_promo_settings_page() {
                 <p class="description" style="background:#fef3c7;padding:10px;border-radius:5px;border-left:3px solid #f59e0b;">
                     <strong>💡 Tip:</strong> If you frequently update promos in WHMCS, disable caching or set to 1-2 minutes for instant updates.
                 </p>
+                <p class="description" style="background:#e7f3ff;padding:10px;border-radius:5px;border-left:3px solid #0891b2;margin-top:10px;">
+                    <strong>🔌 Third-Party Cache Plugins Detected:</strong> Our cache clearing now supports:
+                    <br>• <strong>W3 Total Cache</strong> - Auto-cleared when you click "Clear Cache Now"
+                    <br>• <strong>WP Super Cache</strong> - Auto-cleared
+                    <br>• <strong>WP Rocket</strong> - Auto-cleared
+                    <br>• <strong>LiteSpeed Cache</strong> - Auto-cleared
+                    <br><em>URLs and prices will update immediately after clearing!</em>
+                </p>
                 <p class="description" style="background:#fee;padding:10px;border-radius:5px;border-left:3px solid #dc3545;margin-top:10px;">
-                    <strong>⚠️ Prices not showing?</strong> If prices rarely appear on cards or you need to clear cache multiple times:
-                    <br>1. Try <strong>disabling cache completely</strong> (uncheck below)
-                    <br>2. Click "Clear Cache Now" button above
-                    <br>3. Refresh your promo page
-                    <br>This forces fresh data from WHMCS every time and should fix price display issues.
+                    <strong>⚠️ Prices or URLs not updating?</strong> If changes don't appear after clearing cache:
+                    <br>1. Click <strong>"Clear Cache Now"</strong> button above (clears ALL caches)
+                    <br>2. If using W3 Total Cache, also flush from: Performance → Dashboard → Empty All Caches
+                    <br>3. Try <strong>disabling cache completely</strong> (uncheck below) for instant updates
+                    <br>4. Refresh your promo page (Ctrl+F5 for hard refresh)
+                    <br><br><strong>💡 URL Settings:</strong> Changes to routes (like /hosting/email) require cache clearing to take effect!
                 </p>
                 <table class="form-table">
                     <tr>
@@ -432,25 +444,24 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.1 ENHANCED - UX & Performance Release</p>
-            <p><strong>What's New in v9.9.1:</strong></p>
+            <p><strong>Version:</strong> 9.9.2 - Cache & URL Routing Fixes</p>
+            <p><strong>What's New in v9.9.2:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🎯 <strong>Smart Discount Labels:</strong> Price override shows actual price, better semantics for all types</li>
-                <li>🔥 <strong>Black Friday Magic:</strong> Auto-detects BF codes, applies stunning dark+gold styling</li>
-                <li>📱 <strong>Domain Search UX:</strong> Opens in new tab, smart placeholders, search icon inside box</li>
-                <li>📚 <strong>Documentation Tab:</strong> Complete shortcode guide with easy copy buttons</li>
-                <li>⚡ <strong>Performance:</strong> Better price caching and display optimization</li>
-                <li>🎨 <strong>Title Generation:</strong> Contextual titles based on discount type (override/percentage/fixed)</li>
+                <li>🔌 <strong>W3 Total Cache:</strong> Auto-clears W3TC, WP Rocket, WP Super Cache, and LiteSpeed Cache</li>
+                <li>🔗 <strong>URL Routing Fixed:</strong> Email promos now correctly route to /hosting/email (respects your settings!)</li>
+                <li>🎯 <strong>Multi-Product Codes:</strong> Automatically link to /start with promocode when multiple products</li>
+                <li>📝 <strong>Products Metadata:</strong> Add <code>"products": "SSL, Reseller, Windows Hosting"</code> for custom titles</li>
+                <li>✨ <strong>Better Titles:</strong> "Get 20% off our SSL, Reseller and Windows Hosting Plans"</li>
             </ul>
-            <p style="margin-top:10px;"><strong>All Previous Features Still Work:</strong></p>
+            <p style="margin-top:10px;"><strong>Previous Features (v9.9.1):</strong></p>
             <ul style="margin:5px 0 0 20px;">
-                <li>✅ TLD parsing & validation</li>
-                <li>✅ Links open in new tabs</li>
-                <li>✅ Intelligent URL routing (WHMCS/WordPress)</li>
-                <li>✅ Promocode persistence</li>
-                <li>✅ Mobile-first responsive design (70% mobile users!)</li>
+                <li>✅ Black Friday dark+gold styling (auto-detects BF codes)</li>
+                <li>✅ Price override labels show actual prices</li>
+                <li>✅ Domain search opens in new tab</li>
+                <li>✅ Documentation tab with copy buttons</li>
+                <li>✅ Mobile-first design (70% mobile users!)</li>
             </ul>
-            <p style="margin-top:10px;"><strong>🎯 Recommended Setup:</strong> Domains/SSL → Direct WHMCS | Hosting/VPS → WordPress landing pages | Use WP Code Lite for scripts</p>
+            <p style="margin-top:10px;"><strong>🎯 Recommended:</strong> Clear cache after changing routes | Use /start for multi-product promos | Add products metadata for custom titles</p>
         </div>
         
         <!-- WORDPRESS BRIDGE SCRIPT -->
@@ -609,8 +620,11 @@ function whx_promo_settings_page() {
                         <li><strong>Black Friday:</strong> Codes with "bf", "blackfriday", "black", or "friday" get special gold styling automatically</li>
                         <li><strong>Price Override:</strong> Set discount type to "Override" in WHMCS to show exact pricing instead of percentages</li>
                         <li><strong>Custom Titles:</strong> Add JSON metadata to promo notes field for full control over titles and descriptions</li>
+                        <li><strong>Products Metadata:</strong> Add <code>"products": "SSL, Reseller, Windows Hosting"</code> to generate titles like "Get 20% off our SSL, Reseller, Windows Hosting"</li>
+                        <li><strong>Multi-Product Codes:</strong> Codes with multiple products automatically link to /start with promocode persistence</li>
                         <li><strong>Domain Search:</strong> Now opens in new tab like other buttons for better UX</li>
                         <li><strong>WP Code Lite:</strong> Use this plugin to add custom scripts in Header & Footer section instead of editing theme files</li>
+                        <li><strong>Cache Issues:</strong> Using W3 Total Cache? Click "Clear Cache Now" to clear ALL caches (internal + W3TC)</li>
                     </ul>
                 </div>
             </div>
@@ -1094,23 +1108,29 @@ function whx_generate_promo_link($code, $metadata, $categories, $has_domains, $d
     }
     
     whx_promo_debug("⚠️ No category page found, using fallbacks");
-    
+
     // ========================================================================
-    // PRIORITY 3: WHMCS Cart Fallbacks (ONLY if no category match)
+    // PRIORITY 3: Multi-Product Default to /start (v9.9.2)
     // ========================================================================
-    
-    // Fallback 3a: Single product direct cart add
+    if (count($product_ids) > 1) {
+        // Multiple products → default to /start with promocode
+        $url = $market_url . '/start?promocode=' . rawurlencode($code);
+        whx_promo_debug("→ Multi-product: Defaulting to /start", [
+            'product_count' => count($product_ids),
+            'url' => $url
+        ]);
+        return $url;
+    }
+
+    // ========================================================================
+    // PRIORITY 4: WHMCS Cart Fallbacks (ONLY if no category match)
+    // ========================================================================
+
+    // Fallback 4a: Single product direct cart add
     if (!$domain_only && count($product_ids) === 1) {
         $pid = $product_ids[0];
         $url = $cart_base . '?a=add&pid=' . $pid . '&promocode=' . rawurlencode($code);
         whx_promo_debug("→ Fallback: Single product cart URL", ['pid' => $pid, 'url' => $url]);
-        return $url;
-    }
-    
-    // Fallback 3b: Multiple products cart view
-    if (count($product_ids) > 1) {
-        $url = add_query_arg(['a' => 'view', 'promocode' => rawurlencode($code)], $cart_base);
-        whx_promo_debug("→ Fallback: Multiple products cart view", ['url' => $url]);
         return $url;
     }
     
@@ -1579,9 +1599,9 @@ function whx_calculate_promo_pricing($product_ids, $products, $promo_type, $prom
 
 /**
  * Generate Promo Card Title
- * v9.9.1: Improved title generation for price override and better semantics
+ * v9.9.2: Added products metadata support for multi-product custom titles
  */
-function whx_generate_promo_title($has_domains, $categories, $tld_labels, $discount_text, $domain_only = false, $custom_title = '', $promo_type = '') {
+function whx_generate_promo_title($has_domains, $categories, $tld_labels, $discount_text, $domain_only = false, $custom_title = '', $promo_type = '', $products_meta = '') {
     // Priority 1: Custom title from metadata
     if (!empty($custom_title)) {
         whx_promo_debug("Using custom title", ['title' => $custom_title]);
@@ -1590,8 +1610,13 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
 
     $subject = '';
 
-    // Priority 2: Domain titles (check FIRST!)
-    if ($has_domains && !empty($tld_labels)) {
+    // Priority 2: Products metadata (e.g., "SSL, Reseller, Windows Hosting")
+    if (!empty($products_meta)) {
+        $subject = $products_meta;
+        whx_promo_debug("Using products metadata", ['products' => $products_meta]);
+    }
+    // Priority 3: Domain titles (check FIRST!)
+    elseif ($has_domains && !empty($tld_labels)) {
         if (count($tld_labels) === 1) {
             // Single TLD - use specific title like ".COM Domain"
             $subject = $tld_labels[0] . ' Domain';
@@ -1608,9 +1633,8 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
             ]);
         }
     }
-
-    // Priority 3: Product category titles (if no domain title was set)
-    if (empty($subject)) {
+    // Priority 4: Product category titles (if no domain title or products meta was set)
+    else {
         if (!empty($categories['hosting'])) {
             $subject = 'Hosting Plans';
         } elseif (!empty($categories['vps'])) {
@@ -1641,11 +1665,15 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
             return sprintf('Get %s — %s', $subject, $discount_text);
         }
     } elseif (strpos($discount_text, 'Save') !== false) {
-        // For fixed amount: "Get Hosting Plans — Save Ksh 200"
+        // For fixed amount: "Get SSL, Reseller and Windows Hosting Plans — Save Ksh 200"
         return sprintf('Get %s — %s', $subject, $discount_text);
     } else {
-        // For percentage and others: "Get Hosting Plans for 40% Off"
-        return sprintf('Get %s for %s', $subject, $discount_text);
+        // For percentage: "Get 20% off our SSL, Reseller and Windows Hosting Plans"
+        if (!empty($products_meta)) {
+            return sprintf('Get %s off our %s', $discount_text, $subject);
+        } else {
+            return sprintf('Get %s for %s', $subject, $discount_text);
+        }
     }
 }
 
@@ -1882,9 +1910,10 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             $promo_tld_labels = $sorted_labels;
         }
         
-        // Generate Title (v9.9.1: Now with promo type for better titles!)
+        // Generate Title (v9.9.2: Now with products metadata support!)
         $custom_title = isset($metadata['title']) ? sanitize_text_field($metadata['title']) : '';
-        $display_title = whx_generate_promo_title($has_domains, $categories, $promo_tld_labels, $discount_text, $domain_only, $custom_title, $type);
+        $products_meta = isset($metadata['products']) ? sanitize_text_field($metadata['products']) : '';
+        $display_title = whx_generate_promo_title($has_domains, $categories, $promo_tld_labels, $discount_text, $domain_only, $custom_title, $type, $products_meta);
 
         // Get Description
         $custom_desc = isset($metadata['description']) ? wp_kses_post($metadata['description']) : '';
@@ -2347,11 +2376,39 @@ function whx_whmcs_promos_shortcode_v9($atts) {
 
 /**
  * Clear All Promo-Related Caches
+ * v9.9.2: Added W3 Total Cache, WP Super Cache, and WP Rocket support
  */
 function whx_clear_promo_cache() {
+    // Clear WordPress transients
     delete_transient('whx_promos_v5');
     delete_transient('whx_products_v5_batch');
     delete_transient('whx_tlds_v5_gettldpricing');
+
+    // Clear W3 Total Cache
+    if (function_exists('w3tc_flush_all')) {
+        w3tc_flush_all();
+        whx_promo_debug("✓ W3 Total Cache cleared");
+    }
+
+    // Clear WP Super Cache
+    if (function_exists('wp_cache_clear_cache')) {
+        wp_cache_clear_cache();
+        whx_promo_debug("✓ WP Super Cache cleared");
+    }
+
+    // Clear WP Rocket
+    if (function_exists('rocket_clean_domain')) {
+        rocket_clean_domain();
+        whx_promo_debug("✓ WP Rocket cache cleared");
+    }
+
+    // Clear LiteSpeed Cache
+    if (class_exists('LiteSpeed_Cache_API') && method_exists('LiteSpeed_Cache_API', 'purge_all')) {
+        LiteSpeed_Cache_API::purge_all();
+        whx_promo_debug("✓ LiteSpeed Cache cleared");
+    }
+
+    whx_promo_debug("Cache cleared successfully");
 }
 
 /**
