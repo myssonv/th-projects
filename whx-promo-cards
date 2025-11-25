@@ -3,7 +3,7 @@
  * WHX PROMO CARDS PRO - COMPLETE FUNCTIONS
  * ============================================================================
  * 
- * Version: 9.9.3 - Critical Bug Fixes & Stability
+ * Version: 9.9.8.5 - Promo Token Analysis Panel
  * Author: WHX Development Team
  *
  * CHANGES IN v9.9.3:
@@ -338,6 +338,129 @@ function whx_promo_settings_page() {
             </div>
         </div>
 
+        <!-- PROMO TOKENS DEBUG SECTION -->
+        <?php
+        $promos_debug = whx_get_promos_v5();
+        $tlds_map_check = whx_get_tlds_v5();
+
+        // Filter promos that have domain tokens (likely contain TLDs)
+        $domain_promos = array_filter($promos_debug, function($promo) use ($tlds_map_check) {
+            if (empty($promo['appliesto'])) return false;
+            $tokens = array_map('trim', explode(',', $promo['appliesto']));
+            foreach ($tokens as $token) {
+                $tok_clean = ltrim(strtolower($token), '.');
+                // Check if token contains dot or matches TLD
+                if (strpos($tok_clean, '.') !== false || isset($tlds_map_check[$tok_clean])) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        // Limit to first 10 for display
+        $domain_promos = array_slice($domain_promos, 0, 10);
+        ?>
+
+        <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h2>🔍 Promo Tokens Analysis (Diagnose .co.ke → .ke Issue)</h2>
+            <p class="description">Shows raw tokens from WHMCS promos and why they match/extract. Helps identify garbage tokens causing .co.ke to show as .ke.</p>
+
+            <?php if (empty($domain_promos)): ?>
+                <p style="padding:15px;background:#fef3c7;border-left:4px solid #f59e0b;border-radius:4px;">
+                    <strong>⚠️ No domain promos found.</strong> Check if WHMCS has active promos with domain TLDs.
+                </p>
+            <?php else: ?>
+                <table class="widefat" style="margin-top:15px;">
+                    <thead>
+                        <tr>
+                            <th style="width:120px;">Promo Code</th>
+                            <th style="width:200px;">Raw Tokens (from WHMCS)</th>
+                            <th>Token Analysis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($domain_promos as $promo): ?>
+                            <?php
+                            $tokens = array_map('trim', explode(',', $promo['appliesto']));
+                            $token_analysis = [];
+
+                            foreach ($tokens as $token) {
+                                $tok_clean = ltrim(strtolower($token), '.');
+
+                                // Skip purely numeric tokens (product IDs)
+                                if (is_numeric($tok_clean)) continue;
+
+                                $analysis = ['token' => $token, 'clean' => $tok_clean, 'status' => '', 'reason' => ''];
+
+                                // Check exact match
+                                if (isset($tlds_map_check[$tok_clean])) {
+                                    $analysis['status'] = 'match';
+                                    $analysis['reason'] = '✓ Exact match in WHMCS TLD map';
+                                }
+                                // Check if contains dot but not in WHMCS
+                                elseif (strpos($tok_clean, '.') !== false) {
+                                    $parts = explode('.', $tok_clean);
+                                    $first_part = $parts[0];
+                                    $last_part = end($parts);
+
+                                    if (strlen($first_part) < 2 && isset($tlds_map_check[$last_part])) {
+                                        $analysis['status'] = 'extract';
+                                        $analysis['reason'] = "⚠️ Will extract to .$last_part (first part '$first_part' is garbage: < 2 chars)";
+                                    } elseif (strlen($first_part) >= 2) {
+                                        $analysis['status'] = 'error';
+                                        $analysis['reason'] = "🔴 NOT in WHMCS but first part '$first_part' too long to extract (≥ 2 chars) - THIS IS THE PROBLEM!";
+                                    } else {
+                                        $analysis['status'] = 'skip';
+                                        $analysis['reason'] = "⊘ Skipped (not in WHMCS, no extraction)";
+                                    }
+                                } else {
+                                    $analysis['status'] = 'skip';
+                                    $analysis['reason'] = '⊘ Not a TLD token';
+                                }
+
+                                $token_analysis[] = $analysis;
+                            }
+
+                            // Only show promos with analyzed tokens
+                            if (empty($token_analysis)) continue;
+                            ?>
+                            <tr>
+                                <td><strong><?php echo esc_html($promo['code']); ?></strong></td>
+                                <td><code style="font-size:11px;background:#f1f5f9;padding:4px 6px;border-radius:3px;"><?php echo esc_html($promo['appliesto']); ?></code></td>
+                                <td>
+                                    <?php foreach ($token_analysis as $ta): ?>
+                                        <div style="margin:4px 0;padding:6px 10px;background:<?php
+                                            echo $ta['status'] === 'match' ? '#d1fae5' :
+                                                 ($ta['status'] === 'extract' ? '#fef3c7' :
+                                                 ($ta['status'] === 'error' ? '#fee2e2' : '#f1f5f9'));
+                                        ?>;border-left:3px solid <?php
+                                            echo $ta['status'] === 'match' ? '#10b981' :
+                                                 ($ta['status'] === 'extract' ? '#f59e0b' :
+                                                 ($ta['status'] === 'error' ? '#ef4444' : '#94a3b8'));
+                                        ?>;border-radius:3px;font-size:12px;">
+                                            <code style="font-weight:600;"><?php echo esc_html($ta['token']); ?></code>
+                                            <span style="color:#64748b;margin:0 6px;">→</span>
+                                            <span><?php echo $ta['reason']; ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+                <div style="margin-top:15px;padding:15px;background:#e7f3ff;border-left:4px solid #0891b2;border-radius:4px;">
+                    <p style="margin:0;"><strong>💡 How to Read This:</strong></p>
+                    <ul style="margin:10px 0 0 20px;font-size:13px;">
+                        <li><strong style="color:#10b981;">Green (✓)</strong> = Token exactly matches WHMCS TLD map → Will show correctly</li>
+                        <li><strong style="color:#f59e0b;">Orange (⚠️)</strong> = Token has garbage prefix (< 2 chars) → Will extract to base TLD</li>
+                        <li><strong style="color:#ef4444;">Red (🔴)</strong> = Token NOT in WHMCS but first part ≥ 2 chars → Can't extract, THIS IS THE PROBLEM!</li>
+                        <li><strong>Example:</strong> If you see <code>co.ke</code> marked RED, it means WHMCS doesn't recognize "co.ke" as one TLD - it might be treating it as two separate parts.</li>
+                    </ul>
+                </div>
+            <?php endif; ?>
+        </div>
+
         <form method="post" action="">
             <?php wp_nonce_field('whx_promo_settings'); ?>
             
@@ -571,13 +694,13 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.8.2 - HOTFIX: Second-Level Domains & Filter Tabs</p>
-            <p><strong>🐛 CRITICAL HOTFIX v9.9.8.2:</strong></p>
+            <p><strong>Version:</strong> 9.9.8.5 - Promo Token Analysis Panel</p>
+            <p><strong>🔍 NEW IN v9.9.8.5:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🔧 <strong>FIXED: Second-Level Domains:</strong> .co.ke no longer extracts to .ke! Only extracts if first part ≤2 chars (garbage)</li>
-                <li>⚡ <strong>FIXED: Filter Tabs:</strong> Cards no longer flash and disappear - fixed JavaScript timing bug</li>
-                <li>✅ <strong>Smart Extraction:</strong> "co.ke" preserved, "d.com" → "com" (first part check)</li>
-                <li>📊 <strong>Better Debug:</strong> Shows first_part length and reasoning for extraction decisions</li>
+                <li>📊 <strong>Promo Tokens Analysis:</strong> New debug panel shows raw tokens from WHMCS promos</li>
+                <li>🎯 <strong>Color-Coded Diagnostics:</strong> Green (exact match), Orange (will extract), Red (problem tokens)</li>
+                <li>🔬 <strong>Token-by-Token Analysis:</strong> See exactly why each token matches/extracts/fails</li>
+                <li>💡 <strong>Problem Identification:</strong> Instantly identifies tokens causing .co.ke → .ke issues</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.8.1 Fixes Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
