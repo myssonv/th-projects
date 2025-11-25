@@ -247,7 +247,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.5</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.6</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -500,13 +500,18 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.5 - Multiple Categories Support</p>
-            <p><strong>What's New in v9.9.5:</strong></p>
+            <p><strong>Version:</strong> 9.9.6 - Auto-Generated Descriptions</p>
+            <p><strong>What's New in v9.9.6:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🏷️ <strong>Multiple Categories:</strong> Promos can now belong to multiple categories (e.g., "Email, Hosting")</li>
-                <li>🎯 <strong>Smart Filtering:</strong> Cards appear in ALL their assigned category filters</li>
-                <li>📋 <strong>JSON Example:</strong> <code>{"category": "Email, Hosting"}</code> - card shows in both Email and Hosting tabs</li>
-                <li>🎨 <strong>Primary Category:</strong> Badge displays first category, but filtering works for all</li>
+                <li>✍️ <strong>Auto-Generated Descriptions:</strong> Smart descriptions created automatically when not provided</li>
+                <li>🎯 <strong>Context-Aware:</strong> Considers products, domains (first 5 TLDs), categories, and discounts</li>
+                <li>💰 <strong>Discount Integration:</strong> "Enjoy 20% off on hosting plans" or "Save Ksh 200 on .COM domains"</li>
+                <li>🎨 <strong>Black Friday CTAs:</strong> Special call-to-actions for Black Friday deals</li>
+                <li>📝 <strong>Fallback Priority:</strong> Custom JSON → WHMCS description → Auto-generated</li>
+            </ul>
+            <p style="margin-top:10px;"><strong>v9.9.5 Features Still Included:</strong></p>
+            <ul style="margin:5px 0 0 20px;">
+                <li>✅ Multiple categories support | Smart filtering</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.4 Features Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
@@ -525,7 +530,7 @@ function whx_promo_settings_page() {
                 <li>✅ Price override labels | Domain search in new tab</li>
                 <li>✅ Documentation tab | Mobile-first design</li>
             </ul>
-            <p style="margin-top:10px;"><strong>🎯 Pro Tip:</strong> Use comma-separated categories for promos that fit multiple types: <code>"category": "SSL, Hosting"</code></p>
+            <p style="margin-top:10px;"><strong>🎯 Pro Tip:</strong> Leave description empty in JSON and let the system auto-generate contextual, engaging copy!</p>
         </div>
         
         <!-- WORDPRESS BRIDGE SCRIPT -->
@@ -1813,6 +1818,96 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
     }
 }
 
+/**
+ * Auto-Generate Promo Description (v9.9.6)
+ * Creates intelligent descriptions when not provided in JSON
+ *
+ * @param array $categories Product categories
+ * @param array $tld_labels Domain TLDs (if applicable)
+ * @param string $discount_text The discount text (e.g., "20% Off", "Save Ksh 200")
+ * @param string $products_meta Products metadata (if provided)
+ * @param bool $has_domains Whether promo has domains
+ * @param bool $is_black_friday Whether it's a Black Friday deal
+ * @return string Auto-generated description
+ */
+function whx_auto_generate_description($categories, $tld_labels = [], $discount_text = '', $products_meta = '', $has_domains = false, $is_black_friday = false) {
+    $parts = [];
+
+    // Start with discount hook
+    if (!empty($discount_text)) {
+        if (strpos($discount_text, '%') !== false) {
+            $parts[] = "Enjoy " . strtolower($discount_text) . " on";
+        } elseif (strpos($discount_text, 'Save') !== false) {
+            $parts[] = $discount_text . " on";
+        } else {
+            $parts[] = "Get";
+        }
+    } else {
+        $parts[] = "Special offer on";
+    }
+
+    // Add subject (what's on sale)
+    $subject_parts = [];
+
+    // Priority 1: Products metadata
+    if (!empty($products_meta)) {
+        $subject_parts[] = strtolower($products_meta);
+    }
+    // Priority 2: Domains
+    elseif ($has_domains && !empty($tld_labels)) {
+        if (count($tld_labels) === 1) {
+            $subject_parts[] = $tld_labels[0] . " domains";
+        } elseif (count($tld_labels) <= 5) {
+            $tld_list = implode(', ', array_slice($tld_labels, 0, 5));
+            $subject_parts[] = $tld_list . " domains";
+        } else {
+            $tld_list = implode(', ', array_slice($tld_labels, 0, 5));
+            $remaining = count($tld_labels) - 5;
+            $subject_parts[] = $tld_list . " and " . $remaining . " more domains";
+        }
+    }
+    // Priority 3: Categories
+    else {
+        if (!empty($categories['hosting'])) {
+            $subject_parts[] = "hosting plans";
+        }
+        if (!empty($categories['vps'])) {
+            $subject_parts[] = "VPS servers";
+        }
+        if (!empty($categories['ssl'])) {
+            $subject_parts[] = "SSL certificates";
+        }
+        if (!empty($categories['email'])) {
+            $subject_parts[] = "email services";
+        }
+        if (!empty($categories['dedicated'])) {
+            $subject_parts[] = "dedicated servers";
+        }
+
+        // If multiple categories, combine them
+        if (count($subject_parts) > 1) {
+            $last = array_pop($subject_parts);
+            $subject_parts = [implode(', ', $subject_parts) . ' & ' . $last];
+        }
+
+        // Fallback if no specific categories
+        if (empty($subject_parts)) {
+            $subject_parts[] = "selected products";
+        }
+    }
+
+    $parts[] = $subject_parts[0] . ".";
+
+    // Add call-to-action
+    if ($is_black_friday) {
+        $parts[] = "Limited time Black Friday deal!";
+    } else {
+        $parts[] = "Get started today and save!";
+    }
+
+    return implode(' ', $parts);
+}
+
 // ============================================================================
 // SECTION 5: MAIN SHORTCODE & CARD RENDERING
 // ============================================================================
@@ -2051,10 +2146,25 @@ function whx_whmcs_promos_shortcode_v9($atts) {
         $products_meta = isset($metadata['products']) ? sanitize_text_field($metadata['products']) : '';
         $display_title = whx_generate_promo_title($has_domains, $categories, $promo_tld_labels, $discount_text, $domain_only, $custom_title, $type, $products_meta);
 
-        // Get Description
+        // Get Description (v9.9.6: Auto-generate if not provided)
         $custom_desc = isset($metadata['description']) ? wp_kses_post($metadata['description']) : '';
         $whmcs_desc = isset($promo['description']) ? wp_kses_post(trim($promo['description'])) : '';
-        $final_desc = !empty($custom_desc) ? $custom_desc : $whmcs_desc;
+
+        if (!empty($custom_desc)) {
+            $final_desc = $custom_desc;
+        } elseif (!empty($whmcs_desc)) {
+            $final_desc = $whmcs_desc;
+        } else {
+            // Auto-generate description if none provided
+            $final_desc = whx_auto_generate_description(
+                $categories,
+                $promo_tld_labels,
+                $discount_text,
+                $products_meta,
+                $has_domains,
+                $is_black_friday
+            );
+        }
 
         // Determine Category Label (v9.9.5: Support comma-separated categories)
         // Primary label = first category (for badge display)
