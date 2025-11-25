@@ -247,7 +247,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.8</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.8.1</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -500,15 +500,20 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.8 - Scalable TLD Support & Smart Top Deals</p>
-            <p><strong>What's New in v9.9.8:</strong></p>
+            <p><strong>Version:</strong> 9.9.8.1 - HOTFIX: Domain Detection & Dynamic Top Deals</p>
+            <p><strong>🐛 HOTFIX v9.9.8.1:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🌍 <strong>SCALABLE TLD SUPPORT:</strong> Now uses WHMCS's TLD map directly - supports ALL 700+ TLDs automatically!</li>
-                <li>🔧 <strong>Removed Hardcoded Whitelist:</strong> No more manual second-level domain lists - trusts WHMCS GetTLDPricing</li>
-                <li>💰 <strong>Smart Top Deals:</strong> Sorts by absolute amount saved (e.g., KSh 500 > 40% of KSh 499)</li>
-                <li>📊 <strong>Amount Saved Tracking:</strong> Calculates and displays actual savings for each promo</li>
-                <li>🎯 <strong>Top Deals Logic:</strong> Shows promos saving ≥500 currency units OR ≥40% discount</li>
-                <li>⚡ <strong>Dynamic Sorting:</strong> Top Deals tab auto-sorts by highest savings first</li>
+                <li>🔧 <strong>FIXED: Domain Detection:</strong> v9.9.8 broke domain TLD matching - now has fallback logic</li>
+                <li>✅ <strong>Better TLD Matching:</strong> Tries exact match first, then extracts from garbage tokens like "d.com"</li>
+                <li>🎯 <strong>FIXED: Top Deals:</strong> Removed hardcoded 500/40% limits - now dynamic based on "is_hot" OR any savings</li>
+                <li>📊 <strong>Enhanced Debug Logging:</strong> Shows what TLDs are being tried and why matches fail</li>
+            </ul>
+            <p style="margin-top:10px;"><strong>v9.9.8 Features (Fixed):</strong></p>
+            <ul style="margin:5px 0 0 20px;">
+                <li>🌍 <strong>SCALABLE TLD SUPPORT:</strong> Supports ALL 700+ TLDs from WHMCS GetTLDPricing</li>
+                <li>💰 <strong>Smart Top Deals:</strong> Sorts by absolute amount saved (highest first)</li>
+                <li>📊 <strong>Amount Saved Tracking:</strong> Calculates actual savings for sorting</li>
+                <li>⚡ <strong>Dynamic Sorting:</strong> Top Deals auto-sorts by highest savings</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.7 Features Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
@@ -2026,31 +2031,59 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                     $categories = array_merge($categories, $product_categories);
                 }
             } else {
-                // It's potentially a TLD - trust WHMCS's TLD map!
-                // v9.9.8: Simplified approach - just check if token exists in WHMCS TLD map
-                // This works for ALL 700+ TLDs including second-level domains (.co.ke, .com.au, etc.)
+                // It's potentially a TLD - v9.9.8.1: More robust TLD detection
+                // WHMCS returns TLDs in tlds_map keyed WITHOUT leading dot: "com", "co.ke", "com.au"
+                // Promo tokens may come as: "com", ".com", "co.ke", ".co.ke", or garbage like "d.com"
 
-                $tok = ltrim($token, '.');  // Remove leading dot only
+                $tok = ltrim($token, '.');  // Remove leading dot
                 $tok_lower = strtolower(trim($tok));
 
-                // Check if this TLD exists in WHMCS's GetTLDPricing response
+                // Try exact match first
                 if (isset($tlds_map[$tok_lower])) {
-                    // Found in WHMCS - use it exactly as WHMCS provides it
                     $label = $tlds_map[$tok_lower]['label'];
                     $promo_tlds[$tok_lower] = $label;
                     $categories['domains'] = true;
 
-                    whx_promo_debug("✓ Valid TLD from WHMCS pricing for $code", [
+                    whx_promo_debug("✓ TLD matched (exact) for $code", [
                         'token' => $token,
-                        'tld' => $tok_lower,
+                        'tld_key' => $tok_lower,
                         'label' => $label
                     ]);
+                }
+                // If no match and contains dot, might be garbage - try extracting TLD
+                elseif (strpos($tok_lower, '.') !== false) {
+                    // Could be "co.ke" (valid) or "d.com" (garbage)
+                    // Try the full string first (for second-level domains like "co.ke")
+                    // Already tried above, so now try extracting last part only
+                    $parts = explode('.', $tok_lower);
+                    $last_part = end($parts);
+
+                    // Try last part (e.g., "com" from "d.com")
+                    if (isset($tlds_map[$last_part])) {
+                        $label = $tlds_map[$last_part]['label'];
+                        $promo_tlds[$last_part] = $label;
+                        $categories['domains'] = true;
+
+                        whx_promo_debug("✓ TLD matched (extracted) for $code", [
+                            'token' => $token,
+                            'extracted_from' => $tok_lower,
+                            'tld_key' => $last_part,
+                            'label' => $label
+                        ]);
+                    } else {
+                        whx_promo_debug("⚠️ Could not match TLD for $code", [
+                            'token' => $token,
+                            'tried_exact' => $tok_lower,
+                            'tried_last_part' => $last_part,
+                            'available_tlds_sample' => array_slice(array_keys($tlds_map), 0, 10)
+                        ]);
+                    }
                 } else {
-                    // Not in WHMCS TLD map - could be garbage or unsupported TLD
                     whx_promo_debug("⚠️ Token not in WHMCS TLD map for $code", [
                         'token' => $token,
                         'checked_key' => $tok_lower,
-                        'reason' => 'Not found in GetTLDPricing response'
+                        'is_numeric' => ctype_digit($tok_lower),
+                        'tlds_map_count' => count($tlds_map)
                     ]);
                 }
             }
@@ -2345,9 +2378,9 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             $category_counts['black-friday']++;
         }
 
-        // Count Top Deals (v9.9.8: Based on absolute savings OR high percentage)
-        // Include if: saves ≥500 currency units OR has ≥40% discount
-        if ($item['amount_saved'] >= 500 || $item['discount_val'] >= 40) {
+        // Count Top Deals (v9.9.8.1: Based on "is_hot" OR has measurable savings)
+        // Show deals marked as "hot" OR deals with any amount saved
+        if ($item['is_hot'] || $item['amount_saved'] > 0) {
             $category_counts['top-deals']++;
         }
     }
@@ -2758,8 +2791,9 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                         } else if (filter === 'black-friday') {
                             shouldShow = isBlackFriday && !isExpired;
                         } else if (filter === 'top-deals') {
-                            // v9.9.8: Show if saves ≥500 OR has ≥40% discount
-                            shouldShow = (amountSaved >= 500 || discountVal >= 40) && !isExpired;
+                            // v9.9.8.1: Show "hot" deals or deals with savings
+                            // Relies on PHP to mark appropriate cards - just check if has savings
+                            shouldShow = amountSaved > 0 && !isExpired;
                         } else {
                             // Category filter: show if ANY category matches
                             shouldShow = categoryList.indexOf(filter) !== -1 && !isExpired;
