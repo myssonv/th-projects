@@ -3,21 +3,22 @@
  * WHX PROMO CARDS PRO - COMPLETE FUNCTIONS
  * ============================================================================
  * 
- * Version: 9.9.2 - Cache & URL Routing Fixes
+ * Version: 9.9.3 - Critical Bug Fixes & Stability
  * Author: WHX Development Team
  *
- * CHANGES IN v9.9.2:
- * ✓ FIXED: W3 Total Cache integration (auto-clears W3TC, WP Rocket, WP Super Cache, LiteSpeed)
- * ✓ FIXED: Multi-product codes now default to /start with promocode persistence
- * ✓ FIXED: URL routing respects settings routes (email → /hosting/email works now!)
- * ✓ NEW: Products metadata attribute for custom multi-product titles
- * ✓ NEW: "Get 20% off our SSL, Reseller, Windows Hosting" style titles
- * ✓ IMPROVED: Cache clearing documentation with W3TC specific instructions
+ * CHANGES IN v9.9.3:
+ * ✓ FIXED: JSON parsing now trims whitespace (" Email" vs "Email" both work!)
+ * ✓ FIXED: Case-insensitive category routing ("Emails" and "email" both work)
+ * ✓ FIXED: Plural forms supported (emails → email, domains → domain)
+ * ✓ FIXED: Double "off" in titles ("Get 5% off SSL" not "Get 5% Off off SSL")
+ * ✓ FIXED: Added "&" before last item in lists ("SSL, Reseller & Windows")
+ * ✓ FIXED: One-time products show "one-time" instead of misleading "/mo"
+ * ✓ IMPROVED: Robust JSON parsing with error logging
  *
- * Previous v9.9.1 Features:
- * ✓ Black Friday dark+gold styling | Products metadata titles
+ * Previous Features (v9.9.2 & v9.9.1):
+ * ✓ W3 Total Cache integration | Multi-product → /start
+ * ✓ Black Friday dark+gold styling | Products metadata
  * ✓ Price override labels | Domain search in new tab
- * ✓ Documentation tab with copy buttons
  * 
  * Installation: Replace entire WHX Promo Cards code with this file
  * Requirements: WHX WHMCS Core plugin active
@@ -45,7 +46,7 @@ define('WHX_PROMO_DEBUG', true);
 function whx_promo_debug($message, $data = null) {
     if (!WHX_PROMO_DEBUG || !current_user_can('manage_options')) return;
 
-    $log = '[WHX PROMO v9.9.2] ' . $message;
+    $log = '[WHX PROMO v9.9.3] ' . $message;
     if ($data !== null) {
         $log .= ' | Data: ' . print_r($data, true);
     }
@@ -220,7 +221,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.2</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.3</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -444,24 +445,24 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.2 - Cache & URL Routing Fixes</p>
-            <p><strong>What's New in v9.9.2:</strong></p>
+            <p><strong>Version:</strong> 9.9.3 - Critical Bug Fixes & Stability</p>
+            <p><strong>What's New in v9.9.3:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🔌 <strong>W3 Total Cache:</strong> Auto-clears W3TC, WP Rocket, WP Super Cache, and LiteSpeed Cache</li>
-                <li>🔗 <strong>URL Routing Fixed:</strong> Email promos now correctly route to /hosting/email (respects your settings!)</li>
-                <li>🎯 <strong>Multi-Product Codes:</strong> Automatically link to /start with promocode when multiple products</li>
-                <li>📝 <strong>Products Metadata:</strong> Add <code>"products": "SSL, Reseller, Windows Hosting"</code> for custom titles</li>
-                <li>✨ <strong>Better Titles:</strong> "Get 20% off our SSL, Reseller and Windows Hosting Plans"</li>
+                <li>🐛 <strong>JSON Whitespace Fixed:</strong> Leading/trailing spaces no longer break JSON (" Email" works!)</li>
+                <li>📧 <strong>Case-Insensitive Routing:</strong> "Emails" and "email" both route correctly to /hosting/email</li>
+                <li>🔤 <strong>Plural Forms Support:</strong> "Emails", "Domains", etc. auto-convert to singular</li>
+                <li>✏️ <strong>Title Grammar Fixed:</strong> No more "Get 5% Off off" - now "Get 5% off"</li>
+                <li>➕ <strong>Better List Formatting:</strong> "SSL, Reseller & Windows" (adds & before last item)</li>
+                <li>💰 <strong>One-Time Products:</strong> Show "one-time" instead of misleading "/mo"</li>
             </ul>
-            <p style="margin-top:10px;"><strong>Previous Features (v9.9.1):</strong></p>
+            <p style="margin-top:10px;"><strong>All Previous Features Still Work:</strong></p>
             <ul style="margin:5px 0 0 20px;">
-                <li>✅ Black Friday dark+gold styling (auto-detects BF codes)</li>
-                <li>✅ Price override labels show actual prices</li>
-                <li>✅ Domain search opens in new tab</li>
-                <li>✅ Documentation tab with copy buttons</li>
-                <li>✅ Mobile-first design (70% mobile users!)</li>
+                <li>✅ W3 Total Cache integration | Multi-product → /start</li>
+                <li>✅ Black Friday dark+gold styling | Products metadata</li>
+                <li>✅ Price override labels | Domain search in new tab</li>
+                <li>✅ Documentation tab | Mobile-first design</li>
             </ul>
-            <p style="margin-top:10px;"><strong>🎯 Recommended:</strong> Clear cache after changing routes | Use /start for multi-product promos | Add products metadata for custom titles</p>
+            <p style="margin-top:10px;"><strong>🎯 Pro Tip:</strong> JSON is now more forgiving! Spaces in category names won't break routing anymore.</p>
         </div>
         
         <!-- WORDPRESS BRIDGE SCRIPT -->
@@ -674,22 +675,34 @@ function whx_promo_settings_page() {
 
 /**
  * Parse JSON from Promo Notes Field
+ * v9.9.3: Robust parsing with whitespace trimming and error recovery
  */
 function whx_parse_promo_notes($notes) {
     if (empty($notes)) return [];
-    
+
     $notes = html_entity_decode($notes, ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $notes = trim($notes);
     $notes = preg_replace('/^```(?:json)?\s*/i', '', $notes);
     $notes = preg_replace('/\s*```$/', '', $notes);
     $notes = trim($notes, '` ');
-    
+
     $decoded = json_decode($notes, true);
-    
+
     if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+        // Trim all string values to prevent whitespace issues
+        foreach ($decoded as $key => $value) {
+            if (is_string($value)) {
+                $decoded[$key] = trim($value);
+            }
+        }
         return $decoded;
     }
-    
+
+    whx_promo_debug("JSON parsing failed", [
+        'error' => json_last_error_msg(),
+        'notes' => substr($notes, 0, 200)
+    ]);
+
     return [];
 }
 
@@ -736,52 +749,72 @@ function whx_build_smart_url($path, $code) {
 
 /**
  * Get Category-Based Page Route
+ * v9.9.3: Case-insensitive, handles plural forms, supports multiple categories
  */
 function whx_get_category_page($categories, $tld_labels = []) {
     $settings = whx_promo_get_settings();
     $routes = $settings['routes'];
-    
-    if (!empty($categories['domains'])) {
+
+    // Normalize categories (case-insensitive, handle plurals)
+    $normalized_cats = [];
+    foreach ($categories as $key => $value) {
+        $key_lower = strtolower(trim($key));
+        // Handle plural forms: emails → email, domains → domain
+        $key_singular = rtrim($key_lower, 's');
+        $normalized_cats[$key_singular] = $value;
+        $normalized_cats[$key_lower] = $value; // Keep original too
+    }
+
+    // Domains
+    if (!empty($normalized_cats['domain'])) {
         if (count($tld_labels) === 1) {
             $tld = strtolower(trim($tld_labels[0], '.'));
-            
-            // Special handling for .ke domains
+
             if ($tld === 'ke' || $tld === 'co.ke' || $tld === 'ac.ke') {
                 return $routes['domains_ke'];
             }
-            
-            // Return general domains route (will be appended with ?domain= later)
-            // DO NOT hardcode /cloud/cart.php here!
+
             return $routes['domains'];
         }
-        
-        if (isset($categories['transfer'])) return $routes['domains_transfer'];
-        if (isset($categories['free'])) return $routes['domains_free'];
-        
+
+        if (isset($normalized_cats['transfer'])) return $routes['domains_transfer'];
+        if (isset($normalized_cats['free'])) return $routes['domains_free'];
+
         return $routes['domains'];
     }
-    
-    if (!empty($categories['hosting'])) {
-        if (isset($categories['cpanel'])) return $routes['hosting_cpanel'];
-        if (isset($categories['cyberpanel'])) return $routes['hosting_cyberpanel'];
-        if (isset($categories['windows'])) return $routes['hosting_windows'];
-        if (isset($categories['reseller'])) return $routes['hosting_reseller'];
-        if (isset($categories['free'])) return $routes['hosting_free'];
-        if (isset($categories['dedicated'])) return $routes['hosting_dedicated'];
+
+    // Hosting
+    if (!empty($normalized_cats['hosting'])) {
+        if (isset($normalized_cats['cpanel'])) return $routes['hosting_cpanel'];
+        if (isset($normalized_cats['cyberpanel'])) return $routes['hosting_cyberpanel'];
+        if (isset($normalized_cats['window'])) return $routes['hosting_windows'];
+        if (isset($normalized_cats['reseller'])) return $routes['hosting_reseller'];
+        if (isset($normalized_cats['free'])) return $routes['hosting_free'];
+        if (isset($normalized_cats['dedicated'])) return $routes['hosting_dedicated'];
         return $routes['hosting'];
     }
-    
-    if (!empty($categories['vps'])) {
-        if (isset($categories['managed'])) return $routes['vps_managed'];
+
+    // VPS
+    if (!empty($normalized_cats['vps'])) {
+        if (isset($normalized_cats['managed'])) return $routes['vps_managed'];
         return $routes['vps'];
     }
-    
-    if (!empty($categories['email'])) return $routes['hosting_email'];
-    if (!empty($categories['ssl'])) return $routes['ssl'];
-    if (isset($categories['builder']) || isset($categories['ai'])) return $routes['ai_builder'];
-    if (isset($categories['shop']) || isset($categories['ecommerce'])) return $routes['online_store'];
-    if (isset($categories['seo'])) return $routes['seo'];
-    
+
+    // Email (handles "email", "emails", "Email", "Emails", etc.)
+    if (!empty($normalized_cats['email'])) return $routes['hosting_email'];
+
+    // SSL
+    if (!empty($normalized_cats['ssl'])) return $routes['ssl'];
+
+    // Builder/AI
+    if (isset($normalized_cats['builder']) || isset($normalized_cats['ai'])) return $routes['ai_builder'];
+
+    // Shop/Ecommerce
+    if (isset($normalized_cats['shop']) || isset($normalized_cats['ecommerce'])) return $routes['online_store'];
+
+    // SEO
+    if (isset($normalized_cats['seo'])) return $routes['seo'];
+
     return null;
 }
 
@@ -1364,20 +1397,38 @@ function whx_get_tlds_v5() {
 
 /**
  * Extract Product Pricing for Specific Cycle
+ * v9.9.3: Added support for onetime and free payment types
  */
 function whx_extract_product_pricing($product_data, $preferred_cycle = 'annually') {
     if (empty($product_data) || !isset($product_data['raw'])) return null;
-    
+
     $item = $product_data['raw'];
     $pricing = [];
-    
+
     $currency = function_exists('whx_market_currency') ? whx_market_currency() : 'USD';
-    
+
+    // Check for payment type
+    $payment_type = isset($item['paytype']) ? strtolower($item['paytype']) : '';
+
+    // Check for onetime pricing first
+    if ($payment_type === 'onetime' || $payment_type === 'free') {
+        if (isset($item['pricing'][$currency]['onetime'])) {
+            $price = floatval($item['pricing'][$currency]['onetime']);
+            if ($price >= 0) { // Allow 0 for free products
+                return [
+                    'price' => $price,
+                    'cycle' => 'onetime',
+                    'payment_type' => $payment_type
+                ];
+            }
+        }
+    }
+
     if (isset($item['pricing'][$currency]) && is_array($item['pricing'][$currency])) {
         $currency_pricing = $item['pricing'][$currency];
-        
+
         $cycles = ['monthly', 'quarterly', 'semiannually', 'annually', 'biennially', 'triennially'];
-        
+
         foreach ($cycles as $cycle) {
             if (isset($currency_pricing[$cycle])) {
                 $price = floatval($currency_pricing[$cycle]);
@@ -1387,7 +1438,7 @@ function whx_extract_product_pricing($product_data, $preferred_cycle = 'annually
             }
         }
     }
-    
+
     if (empty($pricing)) {
         $cycles = ['monthly', 'quarterly', 'semiannually', 'annually', 'biennially', 'triennially'];
         foreach ($cycles as $cycle) {
@@ -1399,27 +1450,28 @@ function whx_extract_product_pricing($product_data, $preferred_cycle = 'annually
             }
         }
     }
-    
+
     if (empty($pricing)) return null;
-    
+
     $cycle_priority = [
         'annually' => ['annually', 'semiannually', 'quarterly', 'monthly'],
         'semiannually' => ['semiannually', 'annually', 'quarterly', 'monthly'],
         'quarterly' => ['quarterly', 'semiannually', 'annually', 'monthly'],
         'monthly' => ['monthly', 'quarterly', 'semiannually', 'annually'],
     ];
-    
+
     $search_order = isset($cycle_priority[$preferred_cycle]) ? $cycle_priority[$preferred_cycle] : $cycle_priority['annually'];
-    
+
     foreach ($search_order as $cycle) {
         if (isset($pricing[$cycle]) && $pricing[$cycle] > 0) {
             return [
                 'price' => $pricing[$cycle],
                 'cycle' => $cycle,
+                'payment_type' => 'recurring'
             ];
         }
     }
-    
+
     return null;
 }
 
@@ -1584,13 +1636,15 @@ function whx_calculate_promo_pricing($product_ids, $products, $promo_type, $prom
             'annually' => 'yr',
             'biennially' => '2yr',
             'triennially' => '3yr',
+            'onetime' => '', // One-time payment - no period display
         ];
         $period = isset($period_map[$cycle]) ? $period_map[$cycle] : 'yr';
-        
+
         return [
             'price_now' => $price_now,
             'price_was' => $price_was,
             'price_period' => $period,
+            'is_onetime' => ($cycle === 'onetime'),
         ];
     }
     
@@ -1599,7 +1653,7 @@ function whx_calculate_promo_pricing($product_ids, $products, $promo_type, $prom
 
 /**
  * Generate Promo Card Title
- * v9.9.2: Added products metadata support for multi-product custom titles
+ * v9.9.3: Fixed double "off", adds "&" to last item, handles commas properly
  */
 function whx_generate_promo_title($has_domains, $categories, $tld_labels, $discount_text, $domain_only = false, $custom_title = '', $promo_type = '', $products_meta = '') {
     // Priority 1: Custom title from metadata
@@ -1612,6 +1666,17 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
 
     // Priority 2: Products metadata (e.g., "SSL, Reseller, Windows Hosting")
     if (!empty($products_meta)) {
+        // Add "&" before last item if user hasn't already added "and" or "&"
+        $has_conjunction = (stripos($products_meta, ' and ') !== false || stripos($products_meta, ' & ') !== false);
+
+        if (!$has_conjunction && substr_count($products_meta, ',') >= 1) {
+            // Replace last comma with " &"
+            $pos = strrpos($products_meta, ',');
+            if ($pos !== false) {
+                $products_meta = substr_replace($products_meta, ' &', $pos, 1);
+            }
+        }
+
         $subject = $products_meta;
         whx_promo_debug("Using products metadata", ['products' => $products_meta]);
     }
@@ -1657,7 +1722,7 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
 
     // Generate title based on promo type
     if ($promo_type === 'override' || $promo_type === 'price override') {
-        // For price override: "Get .COM Domain at [Price]" or "Get Hosting Plans from [Price]"
+        // For price override: "Get .COM Domain from [Price]"
         if (strpos($discount_text, 'Ksh') !== false || strpos($discount_text, 'USD') !== false ||
             strpos($discount_text, '$') !== false || strpos($discount_text, '€') !== false) {
             return sprintf('Get %s from %s', $subject, $discount_text);
@@ -1665,12 +1730,14 @@ function whx_generate_promo_title($has_domains, $categories, $tld_labels, $disco
             return sprintf('Get %s — %s', $subject, $discount_text);
         }
     } elseif (strpos($discount_text, 'Save') !== false) {
-        // For fixed amount: "Get SSL, Reseller and Windows Hosting Plans — Save Ksh 200"
+        // For fixed amount: "Get SSL, Reseller & Windows Hosting — Save Ksh 200"
         return sprintf('Get %s — %s', $subject, $discount_text);
     } else {
-        // For percentage: "Get 20% off our SSL, Reseller and Windows Hosting Plans"
+        // For percentage: "Get 20% off SSL, Reseller & Windows Hosting" (not "off off")
         if (!empty($products_meta)) {
-            return sprintf('Get %s off our %s', $discount_text, $subject);
+            // Remove "Off" from discount_text to avoid "off off"
+            $clean_discount = str_ireplace(' off', '', $discount_text);
+            return sprintf('Get %s off %s', $clean_discount, $subject);
         } else {
             return sprintf('Get %s for %s', $subject, $discount_text);
         }
@@ -2140,9 +2207,11 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                                 <span class="whx-promo-card__price-now"><?php echo esc_html($item['pricing']['price_now']); ?></span>
                                 <?php if (!empty($item['pricing']['price_period'])): ?>
                                     <span class="whx-promo-card__price-period">/<?php echo esc_html($item['pricing']['price_period']); ?></span>
+                                <?php elseif (!empty($item['pricing']['is_onetime'])): ?>
+                                    <span class="whx-promo-card__price-period">one-time</span>
                                 <?php endif; ?>
                             <?php endif; ?>
-                            
+
                             <?php if (!empty($item['pricing']['price_was']) && $item['pricing']['price_was'] !== $item['pricing']['price_now']): ?>
                                 <span class="whx-promo-card__price-was"><?php echo esc_html($item['pricing']['price_was']); ?></span>
                             <?php endif; ?>
