@@ -3,7 +3,7 @@
  * WHX PROMO CARDS PRO - COMPLETE FUNCTIONS
  * ============================================================================
  * 
- * Version: 9.9.8.7 - Smart Cache Management & Cloudflare Integration
+ * Version: 9.9.8.8 - Security Hardening & Production Safety
  * Author: WHX Development Team
  *
  * CHANGES IN v9.9.3:
@@ -36,11 +36,12 @@ if (!defined('ABSPATH')) {
 // ============================================================================
 // CONFIGURATION: VERSION & DEBUG MODE
 // ============================================================================
-// v9.9.8.7: Version-based cache keys ensure fresh data after updates
-define('WHX_PROMO_VERSION', '9.9.8.7');
+// v9.9.8.8: Security hardening and production-safe debug mode
+define('WHX_PROMO_VERSION', '9.9.8.8');
 
-// Set to false in production to disable debug logging
-define('WHX_PROMO_DEBUG', true);
+// v9.9.8.8: Security - Debug mode now follows WP_DEBUG (auto-disabled in production)
+// Only enabled if WP_DEBUG is true (typically false in production)
+define('WHX_PROMO_DEBUG', defined('WP_DEBUG') && WP_DEBUG);
 
 /**
  * Debug Logger Function
@@ -655,6 +656,14 @@ function whx_promo_settings_page() {
                     </tr>
                 </table>
 
+                <div style="padding:12px;background:#fee2e2;border-left:4px solid #ef4444;border-radius:4px;margin-top:15px;font-size:13px;">
+                    <strong>🔒 Security Note:</strong> API tokens are stored in your WordPress database. Ensure:
+                    <br>• Your WordPress installation is secure (latest version, strong admin passwords)
+                    <br>• Database backups are encrypted
+                    <br>• Use API tokens with <strong>minimal permissions</strong> (only <code>Zone.Cache Purge</code>)
+                    <br>• Revoke tokens immediately if your site is compromised
+                </div>
+
                 <?php if ($cf_configured): ?>
                     <div style="padding:12px;background:#d1fae5;border-left:4px solid #10b981;border-radius:4px;margin-top:15px;">
                         <strong>✓ Cloudflare Configured!</strong> Cache will be automatically purged when you click "Clear All Caches" button.
@@ -793,14 +802,14 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> <?php echo WHX_PROMO_VERSION; ?> - Smart Cache Management</p>
-            <p><strong>🚀 NEW IN v9.9.8.7:</strong></p>
+            <p><strong>Version:</strong> <?php echo WHX_PROMO_VERSION; ?> - Security Hardening</p>
+            <p><strong>🔒 NEW IN v9.9.8.8 (Security Update):</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>⚡ <strong>Version-Based Cache Keys:</strong> Each code version uses unique cache - updates always fetch fresh data</li>
-                <li>☁️ <strong>Cloudflare Integration:</strong> Automatically purge Cloudflare edge cache when clearing WordPress cache</li>
-                <li>📊 <strong>Cache Status Display:</strong> See cache status, last cleared time, and Cloudflare config at a glance</li>
-                <li>🧹 <strong>Smart Cache Clearing:</strong> Clears WordPress transients + W3TC + WP Rocket + Cloudflare in one click</li>
-                <li>🔄 <strong>Auto-Invalidation:</strong> Old cache versions automatically discarded on code updates</li>
+                <li>🛡️ <strong>SQL Injection Protection:</strong> Database queries now use prepared statements with proper escaping</li>
+                <li>🔐 <strong>URL Injection Prevention:</strong> Cloudflare API parameters validated and URL-encoded</li>
+                <li>⚡ <strong>Production-Safe Debug:</strong> Debug mode auto-disabled in production (follows WP_DEBUG setting)</li>
+                <li>✅ <strong>Input Validation:</strong> Cloudflare Zone ID format validated (32 alphanumeric chars)</li>
+                <li>📋 <strong>Better Error Messages:</strong> Cloudflare API errors now show specific error details</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.8.1 Fixes Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
@@ -3176,11 +3185,22 @@ function whx_purge_cloudflare_cache() {
         return ['success' => false, 'message' => 'Cloudflare API credentials not configured'];
     }
 
-    $api_token = $settings['cloudflare']['api_token'];
-    $zone_id = $settings['cloudflare']['zone_id'];
+    $api_token = sanitize_text_field($settings['cloudflare']['api_token']);
+    $zone_id = sanitize_text_field($settings['cloudflare']['zone_id']);
+
+    // v9.9.8.8: Security hardening - validate zone_id format (alphanumeric, 32 chars)
+    if (!preg_match('/^[a-zA-Z0-9]{32}$/', $zone_id)) {
+        return ['success' => false, 'message' => 'Invalid Cloudflare Zone ID format'];
+    }
+
+    // v9.9.8.8: Security hardening - properly escape URL components
+    $url = sprintf(
+        'https://api.cloudflare.com/client/v4/zones/%s/purge_cache',
+        rawurlencode($zone_id)
+    );
 
     // Purge everything (or specific URLs if needed)
-    $response = wp_remote_post("https://api.cloudflare.com/client/v4/zones/$zone_id/purge_cache", [
+    $response = wp_remote_post($url, [
         'headers' => [
             'Authorization' => 'Bearer ' . $api_token,
             'Content-Type' => 'application/json'
@@ -3199,7 +3219,8 @@ function whx_purge_cloudflare_cache() {
         return ['success' => true, 'message' => 'Cloudflare cache purged'];
     }
 
-    return ['success' => false, 'message' => 'Cloudflare API returned error'];
+    $error_msg = !empty($body['errors'][0]['message']) ? $body['errors'][0]['message'] : 'Unknown error';
+    return ['success' => false, 'message' => 'Cloudflare API error: ' . $error_msg];
 }
 
 /**
@@ -3214,10 +3235,25 @@ function whx_clear_promo_cache() {
     delete_transient('whx_products_' . WHX_PROMO_VERSION);
     delete_transient('whx_tlds_' . WHX_PROMO_VERSION);
 
-    // Clear old version transients (wildcard delete)
-    $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_whx_promos_%' OR option_name LIKE '_transient_timeout_whx_promos_%'");
-    $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_whx_products_%' OR option_name LIKE '_transient_timeout_whx_products_%'");
-    $wpdb->query("DELETE FROM $wpdb->options WHERE option_name LIKE '_transient_whx_tlds_%' OR option_name LIKE '_transient_timeout_whx_tlds_%'");
+    // v9.9.8.8: Security hardening - use prepared statements for wildcard deletes
+    // Clear old version transients (prevents cache buildup from version upgrades)
+    $wpdb->query($wpdb->prepare(
+        "DELETE FROM $wpdb->options WHERE option_name LIKE %s OR option_name LIKE %s",
+        $wpdb->esc_like('_transient_whx_promos_') . '%',
+        $wpdb->esc_like('_transient_timeout_whx_promos_') . '%'
+    ));
+
+    $wpdb->query($wpdb->prepare(
+        "DELETE FROM $wpdb->options WHERE option_name LIKE %s OR option_name LIKE %s",
+        $wpdb->esc_like('_transient_whx_products_') . '%',
+        $wpdb->esc_like('_transient_timeout_whx_products_') . '%'
+    ));
+
+    $wpdb->query($wpdb->prepare(
+        "DELETE FROM $wpdb->options WHERE option_name LIKE %s OR option_name LIKE %s",
+        $wpdb->esc_like('_transient_whx_tlds_') . '%',
+        $wpdb->esc_like('_transient_timeout_whx_tlds_') . '%'
+    ));
 
     // Store cache clear timestamp
     update_option('whx_promo_cache_cleared', current_time('mysql'));
