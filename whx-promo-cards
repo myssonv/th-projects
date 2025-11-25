@@ -247,7 +247,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.4</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.5</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -500,15 +500,18 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.4 - Instant Filter Tabs</p>
-            <p><strong>What's New in v9.9.4:</strong></p>
+            <p><strong>Version:</strong> 9.9.5 - Multiple Categories Support</p>
+            <p><strong>What's New in v9.9.5:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🎯 <strong>Instant Filter Tabs:</strong> Filter promos by Domains, Hosting, SSL, VPS, Email - no page reload!</li>
-                <li>⚡ <strong>Black Friday Filter:</strong> Quick access to special Black Friday deals</li>
-                <li>🔥 <strong>Top Deals Filter:</strong> See highest discounts (≥40%) at a glance</li>
-                <li>⚙️ <strong>Customizable Tabs:</strong> Control which filter tabs show in settings</li>
-                <li>📱 <strong>Mobile-Friendly:</strong> Responsive filter tabs that work perfectly on all devices</li>
-                <li>✨ <strong>Smooth Animations:</strong> Cards fade in/out beautifully when filtering</li>
+                <li>🏷️ <strong>Multiple Categories:</strong> Promos can now belong to multiple categories (e.g., "Email, Hosting")</li>
+                <li>🎯 <strong>Smart Filtering:</strong> Cards appear in ALL their assigned category filters</li>
+                <li>📋 <strong>JSON Example:</strong> <code>{"category": "Email, Hosting"}</code> - card shows in both Email and Hosting tabs</li>
+                <li>🎨 <strong>Primary Category:</strong> Badge displays first category, but filtering works for all</li>
+            </ul>
+            <p style="margin-top:10px;"><strong>v9.9.4 Features Still Included:</strong></p>
+            <ul style="margin:5px 0 0 20px;">
+                <li>✅ Instant filter tabs | Black Friday filter | Top Deals filter</li>
+                <li>✅ Customizable tabs | Mobile-friendly | Smooth animations</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.3 Fixes Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
@@ -522,7 +525,7 @@ function whx_promo_settings_page() {
                 <li>✅ Price override labels | Domain search in new tab</li>
                 <li>✅ Documentation tab | Mobile-first design</li>
             </ul>
-            <p style="margin-top:10px;"><strong>🎯 Pro Tip:</strong> Enable filter tabs in settings to let users quickly find specific offer types!</p>
+            <p style="margin-top:10px;"><strong>🎯 Pro Tip:</strong> Use comma-separated categories for promos that fit multiple types: <code>"category": "SSL, Hosting"</code></p>
         </div>
         
         <!-- WORDPRESS BRIDGE SCRIPT -->
@@ -1033,10 +1036,16 @@ function whx_categorize_product_advanced($group, $metadata = []) {
     }
     
     // ========================================================================
-    // METADATA OVERRIDE
+    // METADATA OVERRIDE (v9.9.5: Support comma-separated categories)
     // ========================================================================
     if (!empty($metadata['category'])) {
-        $categories[strtolower($metadata['category'])] = true;
+        // Support comma-separated categories: "Email, Hosting" or "SSL, VPS"
+        $category_list = array_map('trim', explode(',', $metadata['category']));
+        foreach ($category_list as $cat) {
+            if (!empty($cat)) {
+                $categories[strtolower($cat)] = true;
+            }
+        }
     }
     
     // ========================================================================
@@ -2047,23 +2056,35 @@ function whx_whmcs_promos_shortcode_v9($atts) {
         $whmcs_desc = isset($promo['description']) ? wp_kses_post(trim($promo['description'])) : '';
         $final_desc = !empty($custom_desc) ? $custom_desc : $whmcs_desc;
 
-        // Determine Category Label
+        // Determine Category Label (v9.9.5: Support comma-separated categories)
+        // Primary label = first category (for badge display)
+        // All categories = used for filtering
+        $all_categories = [];
         if (!empty($metadata['category'])) {
-            $cat_label = sanitize_text_field($metadata['category']);
+            $category_list = array_map('trim', explode(',', $metadata['category']));
+            $cat_label = sanitize_text_field($category_list[0]); // First category for display
+            $all_categories = array_map(function($c) { return strtolower(sanitize_text_field($c)); }, $category_list);
         } elseif ($domain_only) {
             $cat_label = 'Domains';
+            $all_categories = ['domains'];
         } elseif (!empty($categories['hosting'])) {
             $cat_label = 'Hosting';
+            $all_categories = ['hosting'];
         } elseif (!empty($categories['vps'])) {
             $cat_label = 'VPS';
+            $all_categories = ['vps'];
         } elseif (!empty($categories['ssl'])) {
             $cat_label = 'SSL';
+            $all_categories = ['ssl'];
         } elseif (!empty($categories['email'])) {
             $cat_label = 'Email';
+            $all_categories = ['email'];
         } elseif (!empty($categories['dedicated'])) {
             $cat_label = 'Dedicated';
+            $all_categories = ['dedicated'];
         } else {
             $cat_label = 'Promo';
+            $all_categories = ['promo'];
         }
 
         // Calculate Badge States
@@ -2132,6 +2153,7 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             'expiry_ts' => $ts,
             'is_expired' => $is_expired,
             'cat_label' => $cat_label,
+            'all_categories' => $all_categories, // v9.9.5: Support multiple categories
             'is_hot' => $is_hot,
             'ending_soon' => $ending_soon,
             'is_black_friday' => $is_black_friday,
@@ -2260,6 +2282,7 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             ?>
             <article class="<?php echo implode(' ', $card_classes); ?>"
                      data-category="<?php echo esc_attr(strtolower($item['cat_label'])); ?>"
+                     data-categories="<?php echo esc_attr(implode(',', $item['all_categories'])); ?>"
                      data-domain-only="<?php echo $item['domain_only'] ? '1' : '0'; ?>"
                      data-show-search="<?php echo $item['show_domain_search'] ? '1' : '0'; ?>"
                      data-tld="<?php echo esc_attr($item['tld_for_search']); ?>"
@@ -2565,9 +2588,11 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                     });
                     tab.classList.add('whx-filter-tab--active');
 
-                    // Filter cards
+                    // Filter cards (v9.9.5: Support multiple categories)
                     promoCards.forEach(function(card) {
                         var category = card.getAttribute('data-category');
+                        var categories = card.getAttribute('data-categories'); // Comma-separated list
+                        var categoryList = categories ? categories.split(',') : [category];
                         var discountVal = parseFloat(card.getAttribute('data-discount-value')) || 0;
                         var isBlackFriday = card.getAttribute('data-is-black-friday') === '1';
                         var isExpired = card.classList.contains('whx-promo-card--expired');
@@ -2581,8 +2606,8 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                         } else if (filter === 'top-deals') {
                             shouldShow = discountVal >= 40 && !isExpired;
                         } else {
-                            // Category filter (domains, hosting, ssl, vps, email)
-                            shouldShow = category === filter && !isExpired;
+                            // Category filter: show if ANY category matches
+                            shouldShow = categoryList.indexOf(filter) !== -1 && !isExpired;
                         }
 
                         // Show/hide with animation
