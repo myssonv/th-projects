@@ -247,7 +247,7 @@ function whx_promo_settings_page() {
     $cache_nonce = wp_create_nonce('whx_promo_cache_nonce');
     ?>
     <div class="wrap">
-        <h1>🎟️ WHX Promo Cards - v9.9.7</h1>
+        <h1>🎟️ WHX Promo Cards - v9.9.8</h1>
         
         <?php if (WHX_PROMO_DEBUG): ?>
         <div style="background:#fef3c7;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #f59e0b;">
@@ -500,15 +500,19 @@ function whx_promo_settings_page() {
         <!-- VERSION INFO SECTION -->
         <div style="background:#f0fdf4;padding:15px;margin:20px 0;border-radius:8px;border-left:4px solid #10b981;">
             <p><strong>Shortcode:</strong> <code>[whmcs_promos]</code> <em>(See documentation tab above for all options)</em></p>
-            <p><strong>Version:</strong> 9.9.7 - Critical Fixes & UX Improvements</p>
-            <p><strong>What's New in v9.9.7:</strong></p>
+            <p><strong>Version:</strong> 9.9.8 - Scalable TLD Support & Smart Top Deals</p>
+            <p><strong>What's New in v9.9.8:</strong></p>
             <ul style="margin:10px 0 0 20px;">
-                <li>🐛 <strong>CRITICAL FIX: Second-Level Domains:</strong> .co.ke, .co.uk domains now display correctly (was showing .ke, .uk)</li>
-                <li>🎨 <strong>Redesigned Filter Tabs:</strong> Oval/pill-shaped tabs with subtle gradient borders</li>
-                <li>🎯 <strong>Smart Tab Display:</strong> Only shows filter tabs that have active promos</li>
-                <li>📏 <strong>Better Spacing:</strong> Increased spacing between filters and cards for cleaner layout</li>
-                <li>📱 <strong>Enhanced Mobile UX:</strong> Smaller, more tap-friendly filter buttons on mobile</li>
-                <li>🔍 <strong>Second-Level TLD Support:</strong> Properly handles Kenya (.co.ke, .ac.ke), UK (.co.uk), South Africa (.co.za), Australia (.com.au), etc.</li>
+                <li>🌍 <strong>SCALABLE TLD SUPPORT:</strong> Now uses WHMCS's TLD map directly - supports ALL 700+ TLDs automatically!</li>
+                <li>🔧 <strong>Removed Hardcoded Whitelist:</strong> No more manual second-level domain lists - trusts WHMCS GetTLDPricing</li>
+                <li>💰 <strong>Smart Top Deals:</strong> Sorts by absolute amount saved (e.g., KSh 500 > 40% of KSh 499)</li>
+                <li>📊 <strong>Amount Saved Tracking:</strong> Calculates and displays actual savings for each promo</li>
+                <li>🎯 <strong>Top Deals Logic:</strong> Shows promos saving ≥500 currency units OR ≥40% discount</li>
+                <li>⚡ <strong>Dynamic Sorting:</strong> Top Deals tab auto-sorts by highest savings first</li>
+            </ul>
+            <p style="margin-top:10px;"><strong>v9.9.7 Features Still Included:</strong></p>
+            <ul style="margin:5px 0 0 20px;">
+                <li>✅ Oval filter tabs | Smart tab display | Better spacing | Enhanced mobile UX</li>
             </ul>
             <p style="margin-top:10px;"><strong>v9.9.6 Features Still Included:</strong></p>
             <ul style="margin:5px 0 0 20px;">
@@ -2022,93 +2026,31 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                     $categories = array_merge($categories, $product_categories);
                 }
             } else {
-                // It's potentially a TLD - properly handle second-level domains!
-                // Examples: "com" → "com", ".com" → "com", ".co.ke" → "co.ke"
-                // But reject: "d.com" → "com", "moneyspace.d.com" → "com"
+                // It's potentially a TLD - trust WHMCS's TLD map!
+                // v9.9.8: Simplified approach - just check if token exists in WHMCS TLD map
+                // This works for ALL 700+ TLDs including second-level domains (.co.ke, .com.au, etc.)
 
                 $tok = ltrim($token, '.');  // Remove leading dot only
                 $tok_lower = strtolower(trim($tok));
 
-                // Known second-level domains (country code TLDs)
-                $second_level_tlds = [
-                    'co.ke', 'ac.ke', 'or.ke', 'ne.ke', 'go.ke', 'sc.ke', // Kenya
-                    'co.uk', 'ac.uk', 'gov.uk', 'org.uk', // UK
-                    'co.za', 'ac.za', 'gov.za', 'org.za', // South Africa
-                    'com.au', 'net.au', 'org.au', 'gov.au', // Australia
-                    'co.nz', 'ac.nz', 'govt.nz', 'org.nz', // New Zealand
-                    'co.in', 'net.in', 'org.in', 'gen.in', // India
-                ];
-
-                // Check if it's a known second-level domain
-                if (in_array($tok_lower, $second_level_tlds)) {
-                    // Keep as-is - it's a valid second-level domain
-                    whx_promo_debug("✓ Detected second-level domain for $code", [
-                        'original_token' => $token,
-                        'tld' => $tok_lower
-                    ]);
-                }
-                // If token contains dots and is NOT a known second-level domain, extract last part
-                elseif (strpos($tok_lower, '.') !== false) {
-                    // Likely garbage like "d.com" or "ae.com" - extract actual TLD
-                    $parts = explode('.', $tok_lower);
-
-                    // Check if second-to-last + last forms a second-level domain
-                    if (count($parts) >= 2) {
-                        $potential_second_level = $parts[count($parts)-2] . '.' . $parts[count($parts)-1];
-                        if (in_array($potential_second_level, $second_level_tlds)) {
-                            $tok_lower = $potential_second_level;
-                        } else {
-                            $tok_lower = end($parts); // Get last part = actual TLD
-                        }
-                    } else {
-                        $tok_lower = end($parts);
-                    }
-
-                    whx_promo_debug("Extracted TLD from dotted token for $code", [
-                        'original_token' => $token,
-                        'extracted_tld' => $tok_lower
-                    ]);
-                }
-                
-                // ✅ v9.9.7 FIX: Validate TLD (including second-level domains)
-                // Valid TLD: 2+ chars, alphabetic (dots allowed for second-level domains)
-                $is_valid_tld = strlen($tok_lower) >= 2 && preg_match('/^[a-z]+(\.[a-z]+)?$/', $tok_lower);
-
-                if ($is_valid_tld) {
-                    // Check if in WHMCS pricing for label
-                    if (isset($tlds_map[$tok_lower])) {
-                        $label = $tlds_map[$tok_lower]['label'];
-                        whx_promo_debug("✓ Valid TLD with WHMCS pricing for $code", [
-                            'token' => $token,
-                            'tld_clean' => $tok_lower,
-                            'label' => $label,
-                            'has_pricing' => true
-                        ]);
-                    } else {
-                        // Valid format but no WHMCS pricing - still accept it!
-                        $label = '.' . strtoupper($tok_lower);
-                        whx_promo_debug("✓ Valid TLD without WHMCS pricing for $code", [
-                            'token' => $token,
-                            'tld_clean' => $tok_lower,
-                            'label' => $label,
-                            'has_pricing' => false,
-                            'note' => 'Will still show form and create link'
-                        ]);
-                    }
-                    
-                    // Add to promo_tlds array
+                // Check if this TLD exists in WHMCS's GetTLDPricing response
+                if (isset($tlds_map[$tok_lower])) {
+                    // Found in WHMCS - use it exactly as WHMCS provides it
+                    $label = $tlds_map[$tok_lower]['label'];
                     $promo_tlds[$tok_lower] = $label;
                     $categories['domains'] = true;
-                    
-                } else {
-                    // Invalid TLD format
-                    whx_promo_debug("⚠️ Rejected invalid TLD token for $code", [
+
+                    whx_promo_debug("✓ Valid TLD from WHMCS pricing for $code", [
                         'token' => $token,
-                        'tld_extracted' => $tok_lower,
-                        'length' => strlen($tok_lower),
-                        'is_alpha' => ctype_alpha($tok_lower),
-                        'has_dots' => strpos($tok_lower, '.') !== false,
-                        'reason' => 'Invalid TLD format (too short, non-alphabetic, or contains dots)'
+                        'tld' => $tok_lower,
+                        'label' => $label
+                    ]);
+                } else {
+                    // Not in WHMCS TLD map - could be garbage or unsupported TLD
+                    whx_promo_debug("⚠️ Token not in WHMCS TLD map for $code", [
+                        'token' => $token,
+                        'checked_key' => $tok_lower,
+                        'reason' => 'Not found in GetTLDPricing response'
                     ]);
                 }
             }
@@ -2272,13 +2214,30 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             }
         }
         
+        // Calculate Amount Saved (v9.9.8: For "Top Deals" sorting by absolute savings)
+        $amount_saved = 0;
+        if ($pricing_data && !empty($pricing_data['price_was']) && !empty($pricing_data['price_now'])) {
+            // Extract numeric values from price strings (removes currency symbols, commas, etc.)
+            $price_was_num = floatval(preg_replace('/[^0-9.]/', '', $pricing_data['price_was']));
+            $price_now_num = floatval(preg_replace('/[^0-9.]/', '', $pricing_data['price_now']));
+            $amount_saved = max(0, $price_was_num - $price_now_num);
+
+            whx_promo_debug("💰 Calculated amount saved for $code", [
+                'price_was' => $pricing_data['price_was'],
+                'price_now' => $pricing_data['price_now'],
+                'price_was_num' => $price_was_num,
+                'price_now_num' => $price_now_num,
+                'amount_saved' => $amount_saved
+            ]);
+        }
+
         // Get TLD for Search Form - Set whenever TLDs exist!
         $tld_for_search = '';
-        
+
         if ($show_domain_search && !empty($promo_tld_keys)) {
             // TLDs are already sorted by length and validated by WHMCS
             $tld_for_search = $promo_tld_keys[0]; // Guaranteed to be valid!
-            
+
             whx_promo_debug("✓ Selected TLD for search form: $code", [
                 'selected_tld' => $tld_for_search,
                 'all_valid_tlds' => $promo_tld_keys,
@@ -2312,6 +2271,7 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             'created_ts' => $created_ts,
             'metadata' => $metadata,
             'pricing' => $pricing_data,
+            'amount_saved' => $amount_saved, // v9.9.8: For Top Deals sorting
             'domain_only' => $domain_only,
             'show_domain_search' => $show_domain_search,
             'tld_for_search' => $tld_for_search,
@@ -2385,8 +2345,9 @@ function whx_whmcs_promos_shortcode_v9($atts) {
             $category_counts['black-friday']++;
         }
 
-        // Count Top Deals (≥40% discount)
-        if ($item['discount_val'] >= 40) {
+        // Count Top Deals (v9.9.8: Based on absolute savings OR high percentage)
+        // Include if: saves ≥500 currency units OR has ≥40% discount
+        if ($item['amount_saved'] >= 500 || $item['discount_val'] >= 40) {
             $category_counts['top-deals']++;
         }
     }
@@ -2475,6 +2436,7 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                      data-show-search="<?php echo $item['show_domain_search'] ? '1' : '0'; ?>"
                      data-tld="<?php echo esc_attr($item['tld_for_search']); ?>"
                      data-discount-value="<?php echo esc_attr($item['discount_val']); ?>"
+                     data-amount-saved="<?php echo esc_attr($item['amount_saved']); ?>"
                      data-is-black-friday="<?php echo ($item['is_black_friday'] && !$item['is_expired']) ? '1' : '0'; ?>"
                      itemscope itemtype="https://schema.org/Offer">
                 
@@ -2776,12 +2738,16 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                     });
                     tab.classList.add('whx-filter-tab--active');
 
-                    // Filter cards (v9.9.5: Support multiple categories)
+                    // v9.9.8: Build array of cards with their data for potential sorting
+                    var visibleCards = [];
+
+                    // Filter cards (v9.9.8: Support amount saved for Top Deals)
                     promoCards.forEach(function(card) {
                         var category = card.getAttribute('data-category');
                         var categories = card.getAttribute('data-categories'); // Comma-separated list
                         var categoryList = categories ? categories.split(',') : [category];
                         var discountVal = parseFloat(card.getAttribute('data-discount-value')) || 0;
+                        var amountSaved = parseFloat(card.getAttribute('data-amount-saved')) || 0;
                         var isBlackFriday = card.getAttribute('data-is-black-friday') === '1';
                         var isExpired = card.classList.contains('whx-promo-card--expired');
 
@@ -2792,30 +2758,52 @@ function whx_whmcs_promos_shortcode_v9($atts) {
                         } else if (filter === 'black-friday') {
                             shouldShow = isBlackFriday && !isExpired;
                         } else if (filter === 'top-deals') {
-                            shouldShow = discountVal >= 40 && !isExpired;
+                            // v9.9.8: Show if saves ≥500 OR has ≥40% discount
+                            shouldShow = (amountSaved >= 500 || discountVal >= 40) && !isExpired;
                         } else {
                             // Category filter: show if ANY category matches
                             shouldShow = categoryList.indexOf(filter) !== -1 && !isExpired;
                         }
 
-                        // Show/hide with animation
                         if (shouldShow) {
-                            card.style.display = 'flex';
-                            // Trigger reflow for animation
-                            setTimeout(function() {
-                                card.style.opacity = '1';
-                                card.style.transform = 'scale(1)';
-                            }, 10);
-                        } else {
-                            card.style.opacity = '0';
-                            card.style.transform = 'scale(0.95)';
-                            setTimeout(function() {
-                                card.style.display = 'none';
-                            }, 200);
+                            visibleCards.push({
+                                element: card,
+                                amountSaved: amountSaved,
+                                discountVal: discountVal
+                            });
                         }
+
+                        // Initially hide all cards (we'll show them in correct order after sorting)
+                        card.style.opacity = '0';
+                        card.style.transform = 'scale(0.95)';
+                        setTimeout(function() {
+                            card.style.display = 'none';
+                        }, 200);
                     });
 
-                    console.log('[WHX v9.9.4] Filter applied:', filter);
+                    // v9.9.8: Sort Top Deals by highest amount saved
+                    if (filter === 'top-deals') {
+                        visibleCards.sort(function(a, b) {
+                            // Sort by amount saved (descending), then by discount percentage
+                            if (b.amountSaved !== a.amountSaved) {
+                                return b.amountSaved - a.amountSaved;
+                            }
+                            return b.discountVal - a.discountVal;
+                        });
+                        console.log('[WHX v9.9.8] Top Deals sorted by amount saved');
+                    }
+
+                    // Show cards in order (respecting sort for Top Deals)
+                    visibleCards.forEach(function(item, index) {
+                        item.element.style.display = 'flex';
+                        item.element.style.order = index; // Use CSS order for visual reordering
+                        setTimeout(function() {
+                            item.element.style.opacity = '1';
+                            item.element.style.transform = 'scale(1)';
+                        }, 10 + (index * 20)); // Stagger animation slightly
+                    });
+
+                    console.log('[WHX v9.9.8] Filter applied:', filter, '- Showing', visibleCards.length, 'cards');
                 });
             });
         });
