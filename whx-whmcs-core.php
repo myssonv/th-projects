@@ -426,7 +426,7 @@ add_action('admin_init', function(){
   add_settings_field('endpoint','API endpoint','whx_field','whx-whmcs-core','whx_main',['key'=>'endpoint','type'=>'url','placeholder'=>'https://yourwhmcs.tld/includes/api.php']);
   add_settings_field('identifier','API identifier','whx_field','whx-whmcs-core','whx_main',['key'=>'identifier']);
   add_settings_field('secret','API secret','whx_field_secret','whx-whmcs-core','whx_main');
-  add_settings_field('accesskey','API access key','whx_field','whx-whmcs-core','whx_main',['key'=>'accesskey']);
+  add_settings_field('accesskey','API access key','whx_field_accesskey','whx-whmcs-core','whx_main');
   add_settings_field('currencyids','Currency IDs JSON','whx_field','whx-whmcs-core','whx_main',['key'=>'currencyids','type'=>'textarea']);
   add_settings_field('timeout','Timeout (sec)','whx_field','whx-whmcs-core','whx_main',['key'=>'timeout','type'=>'number']);
 
@@ -534,7 +534,12 @@ function whx_render(){
 
   // Cloudflare Status
   $cf_status = 'not-configured';
-  if (!empty($o['cf_zone_id'])) {
+  $o_raw = get_option(whx_opt_name(), []); // Check raw DB for encrypted credentials
+  $cf_has_token = !empty($o_raw['cf_api_token']);
+  $cf_has_key_auth = !empty($o_raw['cf_email']) && !empty($o_raw['cf_api_key']);
+  $cf_has_auth = $cf_has_token || $cf_has_key_auth;
+
+  if (!empty($o['cf_zone_id']) && $cf_has_auth) {
     $cf_status = 'not-verified';
     if ($o['cf_verified_at']) $cf_status = 'valid';
     if ($o['cf_last_error']) $cf_status = 'invalid';
@@ -646,19 +651,31 @@ function whx_field($args){
 }
 function whx_field_secret(){
   $o = whx_get_opts();
-  $label = $o['secret'] ? 'set' : 'not set';
-  $color = $o['secret'] ? '#46b450' : '#999';
-  if ($o['secret'] && $o['last_error'] && stripos($o['last_error'],'auth')!==false) { $label='auth failed'; $color='#dc3232'; }
+  $o_raw = get_option(whx_opt_name(), []); // Check raw DB for encrypted data
+  $is_set = !empty($o_raw['secret']);
+  $label = $is_set ? 'set' : 'not set';
+  $color = $is_set ? '#46b450' : '#999';
+  if ($is_set && !empty($o['last_error']) && stripos($o['last_error'],'auth')!==false) { $label='auth failed'; $color='#dc3232'; }
   $badge = '<span style="margin-left:8px;padding:2px 8px;background:'.$color.';color:#fff;border-radius:3px;font-weight:600;">'.$label.'</span>';
   echo '<input type="password" name="'.esc_attr(whx_opt_name()).'[secret]" value="" class="regular-text" autocomplete="new-password" placeholder="•••••••• (leave blank to keep current)" />'.$badge;
+  if ($is_set) echo '<br><small style="color:#666;">Leave blank to keep current value</small>';
+}
+function whx_field_accesskey(){
+  $o = whx_get_opts();
+  $v = $o['accesskey'];
+  echo '<input type="text" name="'.esc_attr(whx_opt_name()).'[accesskey]" value="'.esc_attr($v).'" class="regular-text" placeholder="Optional - for IP-restricted WHMCS API access">';
+  echo '<br><small style="color:#666;"><strong>Note:</strong> This is for WHMCS only (not used for Cloudflare or Bunny CDN)</small>';
 }
 function whx_field_checkbox($args){
   $o = whx_get_opts(); $k=$args['key']; $label=$args['label']??''; $checked = !empty($o[$k]) ? 'checked' : '';
   echo '<label><input type="checkbox" name="'.esc_attr(whx_opt_name()).'['.$k.']" value="1" '.$checked.'> '.esc_html($label).'</label>';
 }
 function whx_field_password($args){
-  $o = whx_get_opts(); $k=$args['key']; $ph=$args['placeholder']??'';
-  $is_set = !empty($o[$k]);
+  $o = whx_get_opts();
+  $o_raw = get_option(whx_opt_name(), []); // Check raw DB for encrypted data
+  $k=$args['key'];
+  $ph=$args['placeholder']??'';
+  $is_set = !empty($o_raw[$k]); // Check if exists in raw DB
   $label = $is_set ? 'set' : 'not set';
   $color = $is_set ? '#46b450' : '#999';
 
@@ -690,18 +707,28 @@ function whx_sanitize($in){
 
   try {
 
-  $out['endpoint']   = isset($in['endpoint']) ? esc_url_raw(trim($in['endpoint'])) : ($cur_raw['endpoint'] ?? '');
-  $out['identifier'] = isset($in['identifier']) ? sanitize_text_field(trim($in['identifier'])) : ($cur_raw['identifier'] ?? '');
-  $out['accesskey']  = isset($in['accesskey']) ? sanitize_text_field(trim($in['accesskey'])) : ($cur_raw['accesskey'] ?? '');
+  // Track if WHMCS credentials changed (to trigger verification)
+  $whmcs_changed = false;
+
+  $new_endpoint = isset($in['endpoint']) ? esc_url_raw(trim($in['endpoint'])) : ($cur_raw['endpoint'] ?? '');
+  if ($new_endpoint !== ($cur_raw['endpoint'] ?? '')) $whmcs_changed = true;
+  $out['endpoint'] = $new_endpoint;
+
+  $new_identifier = isset($in['identifier']) ? sanitize_text_field(trim($in['identifier'])) : ($cur_raw['identifier'] ?? '');
+  if ($new_identifier !== ($cur_raw['identifier'] ?? '')) $whmcs_changed = true;
+  $out['identifier'] = $new_identifier;
+
+  $new_accesskey = isset($in['accesskey']) ? sanitize_text_field(trim($in['accesskey'])) : ($cur_raw['accesskey'] ?? '');
+  if ($new_accesskey !== ($cur_raw['accesskey'] ?? '')) $whmcs_changed = true;
+  $out['accesskey'] = $new_accesskey;
 
   // Handle WHMCS secret (encrypted password field)
   // NOTE: This callback only processes form submissions (always plaintext)
   // Test handlers use whx_update_opts_direct() to bypass this callback
-  $secret_changed = false;
   if (isset($in['secret']) && trim($in['secret'])!=='') {
     // New plaintext secret from form - encrypt it
     $out['secret'] = whx_encrypt(sanitize_text_field(trim($in['secret'])));
-    $secret_changed = true;
+    $whmcs_changed = true;
     whx_audit_log('WHMCS Secret Updated', 'Secret credentials changed');
   } else {
     // No new secret - keep existing ENCRYPTED value from database
@@ -791,8 +818,8 @@ function whx_sanitize($in){
     return $out;
   }
 
-  // Test WHMCS connection if credentials are present
-  if (!empty($out['identifier']) && !empty($out['secret'])) {
+  // Test WHMCS connection ONLY if credentials changed
+  if ($whmcs_changed && !empty($out['identifier']) && !empty($out['secret'])) {
     $cid = (int)reset(json_decode($out['currencyids'], true));
     // Decrypt secret for testing only
     $test_secret = whx_decrypt($out['secret']);
@@ -808,10 +835,10 @@ function whx_sanitize($in){
     if ($ok === true) {
       $out['verified_at']=current_time('timestamp');
       $out['last_error']='';
-      add_settings_error('whx_group','whx_ok','Settings saved. Connected to WHMCS.','updated');
+      add_settings_error('whx_group','whx_ok','Settings saved. WHMCS connection verified.','updated');
 
       $looks_default = (trim($out['currencyids']) === '{"USD":2}');
-      if ($secret_changed || $looks_default) {
+      if ($whmcs_changed || $looks_default) {
         $fetch = whx_fetch_currencies_now($test_cfg);
         if (is_array($fetch) && $fetch) {
           $out['currencyids'] = wp_json_encode($fetch);
@@ -829,12 +856,18 @@ function whx_sanitize($in){
       }
     } else {
       $out['last_error']= is_string($ok)?$ok:'Unknown error';
-      add_settings_error('whx_group','whx_err','Settings saved, but connection failed: '.$out['last_error'],'error');
+      add_settings_error('whx_group','whx_err','Settings saved, but WHMCS connection failed: '.$out['last_error'],'error');
     }
-  } else {
+  } elseif (!$whmcs_changed) {
+    // WHMCS credentials didn't change - preserve existing state
     $out['last_error'] = $cur_raw['last_error'] ?? '';
     $out['verified_at'] = $cur_raw['verified_at'] ?? 0;
-    add_settings_error('whx_group','whx_saved','Settings saved. Enter identifier & secret to connect.','updated');
+    add_settings_error('whx_group','whx_saved','Settings saved.','updated');
+  } else {
+    // Missing WHMCS credentials
+    $out['last_error'] = $cur_raw['last_error'] ?? '';
+    $out['verified_at'] = $cur_raw['verified_at'] ?? 0;
+    add_settings_error('whx_group','whx_saved','Settings saved. Enter identifier & secret to connect to WHMCS.','updated');
   }
 
   // Return RAW data (credentials already encrypted above)
