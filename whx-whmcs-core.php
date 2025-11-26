@@ -676,10 +676,16 @@ function whx_sanitize($in){
   // Handle WHMCS secret (encrypted password field)
   $secret_changed = false;
   if (isset($in['secret']) && trim($in['secret'])!=='') {
-    // New plaintext secret provided - encrypt it
-    $out['secret'] = whx_encrypt(sanitize_text_field(trim($in['secret'])));
-    $secret_changed = true;
-    whx_audit_log('WHMCS Secret Updated', 'Secret credentials changed');
+    $secret_value = sanitize_text_field(trim($in['secret']));
+    // Only encrypt if not already encrypted (prevent double encryption from update_option calls)
+    if (!whx_is_encrypted($secret_value)) {
+      $out['secret'] = whx_encrypt($secret_value);
+      $secret_changed = true;
+      whx_audit_log('WHMCS Secret Updated', 'Secret credentials changed');
+    } else {
+      // Already encrypted - keep as is (from programmatic update_option calls)
+      $out['secret'] = $secret_value;
+    }
   } else {
     // No new secret - keep existing ENCRYPTED value from database
     $out['secret'] = $cur_raw['secret'] ?? '';
@@ -695,10 +701,16 @@ function whx_sanitize($in){
   // Handle Cloudflare API Key (encrypted password field)
   $cf_changed = false;
   if (isset($in['cf_api_key']) && trim($in['cf_api_key'])!=='') {
-    // New plaintext key provided - encrypt it
-    $out['cf_api_key'] = whx_encrypt(sanitize_text_field(trim($in['cf_api_key'])));
-    $cf_changed = true;
-    whx_audit_log('Cloudflare API Key Updated', 'Global API Key changed');
+    $cf_api_key_value = sanitize_text_field(trim($in['cf_api_key']));
+    // Only encrypt if not already encrypted (prevent double encryption from update_option calls)
+    if (!whx_is_encrypted($cf_api_key_value)) {
+      $out['cf_api_key'] = whx_encrypt($cf_api_key_value);
+      $cf_changed = true;
+      whx_audit_log('Cloudflare API Key Updated', 'Global API Key changed');
+    } else {
+      // Already encrypted - keep as is (from programmatic update_option calls)
+      $out['cf_api_key'] = $cf_api_key_value;
+    }
   } else {
     // No new key - keep existing ENCRYPTED value from database
     $out['cf_api_key'] = $cur_raw['cf_api_key'] ?? '';
@@ -706,10 +718,16 @@ function whx_sanitize($in){
 
   // Handle Cloudflare API Token (encrypted password field)
   if (isset($in['cf_api_token']) && trim($in['cf_api_token'])!=='') {
-    // New plaintext token provided - encrypt it
-    $out['cf_api_token'] = whx_encrypt(sanitize_text_field(trim($in['cf_api_token'])));
-    $cf_changed = true;
-    whx_audit_log('Cloudflare API Token Updated', 'API Token changed');
+    $cf_api_token_value = sanitize_text_field(trim($in['cf_api_token']));
+    // Only encrypt if not already encrypted (prevent double encryption from update_option calls)
+    if (!whx_is_encrypted($cf_api_token_value)) {
+      $out['cf_api_token'] = whx_encrypt($cf_api_token_value);
+      $cf_changed = true;
+      whx_audit_log('Cloudflare API Token Updated', 'API Token changed');
+    } else {
+      // Already encrypted - keep as is (from programmatic update_option calls)
+      $out['cf_api_token'] = $cf_api_token_value;
+    }
   } else {
     // No new token - keep existing ENCRYPTED value from database
     $out['cf_api_token'] = $cur_raw['cf_api_token'] ?? '';
@@ -728,10 +746,16 @@ function whx_sanitize($in){
   // Handle Bunny CDN Access Key (encrypted password field)
   $bunny_changed = false;
   if (isset($in['bunny_access_key']) && trim($in['bunny_access_key'])!=='') {
-    // New plaintext key provided - encrypt it
-    $out['bunny_access_key'] = whx_encrypt(sanitize_text_field(trim($in['bunny_access_key'])));
-    $bunny_changed = true;
-    whx_audit_log('Bunny CDN Key Updated', 'Access Key changed');
+    $bunny_access_key_value = sanitize_text_field(trim($in['bunny_access_key']));
+    // Only encrypt if not already encrypted (prevent double encryption from update_option calls)
+    if (!whx_is_encrypted($bunny_access_key_value)) {
+      $out['bunny_access_key'] = whx_encrypt($bunny_access_key_value);
+      $bunny_changed = true;
+      whx_audit_log('Bunny CDN Key Updated', 'Access Key changed');
+    } else {
+      // Already encrypted - keep as is (from programmatic update_option calls)
+      $out['bunny_access_key'] = $bunny_access_key_value;
+    }
   } else {
     // No new key - keep existing ENCRYPTED value from database
     $out['bunny_access_key'] = $cur_raw['bunny_access_key'] ?? '';
