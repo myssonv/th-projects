@@ -238,19 +238,15 @@ function whx_migrate_plaintext_credentials() {
 function whx_update_opts($o){
   $n = whx_opt_name();
 
-  // Encrypt sensitive fields before storage
+  // Encrypt sensitive fields before storage (only if not already encrypted)
   $encrypted = $o;
-  if (!empty($encrypted['secret'])) {
-    $encrypted['secret'] = whx_encrypt($encrypted['secret']);
-  }
-  if (!empty($encrypted['cf_api_key'])) {
-    $encrypted['cf_api_key'] = whx_encrypt($encrypted['cf_api_key']);
-  }
-  if (!empty($encrypted['cf_api_token'])) {
-    $encrypted['cf_api_token'] = whx_encrypt($encrypted['cf_api_token']);
-  }
-  if (!empty($encrypted['bunny_access_key'])) {
-    $encrypted['bunny_access_key'] = whx_encrypt($encrypted['bunny_access_key']);
+  $sensitive_fields = ['secret', 'cf_api_key', 'cf_api_token', 'bunny_access_key'];
+
+  foreach ($sensitive_fields as $field) {
+    if (!empty($encrypted[$field]) && !whx_is_encrypted($encrypted[$field])) {
+      // Only encrypt if it's plaintext (not already encrypted)
+      $encrypted[$field] = whx_encrypt($encrypted[$field]);
+    }
   }
 
   if (get_option($n, null) === null) add_option($n, $encrypted, '', 'no');
