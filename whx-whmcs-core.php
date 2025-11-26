@@ -1,15 +1,88 @@
 <?php
 /**
- * WHX – WHMCS Core (v2.3)
+ * WHX – WHMCS Core (v2.4 - Security Hardened)
  * - Settings page with badges
  * - Buttons at the TOP (Test + Fetch Currencies + Clear Cache)
  * - Auto-fetch currencies after a successful save
  * - Cached helpers for other snippets
  * - Settings submenu always first + highlighted
  * - Cache clearing for plugins, Cloudflare, Bunny CDN
+ * - Encrypted credential storage
+ * - Connection validation for all services
+ * - Audit logging and rate limiting
  */
 
 if (!defined('ABSPATH')) exit;
+
+/* ---------------- Security Functions ---------------- */
+
+/**
+ * Encrypt sensitive data using WordPress salts
+ */
+function whx_encrypt($data) {
+  if (empty($data)) return '';
+  $key = wp_salt('auth') . wp_salt('secure_auth');
+  $iv_length = openssl_cipher_iv_length('aes-256-cbc');
+  $iv = openssl_random_pseudo_bytes($iv_length);
+  $encrypted = openssl_encrypt($data, 'aes-256-cbc', $key, 0, $iv);
+  return base64_encode($iv . $encrypted);
+}
+
+/**
+ * Decrypt sensitive data
+ */
+function whx_decrypt($data) {
+  if (empty($data)) return '';
+  $key = wp_salt('auth') . wp_salt('secure_auth');
+  $data = base64_decode($data);
+  $iv_length = openssl_cipher_iv_length('aes-256-cbc');
+  $iv = substr($data, 0, $iv_length);
+  $encrypted = substr($data, $iv_length);
+  return openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
+}
+
+/**
+ * Sanitize error messages to remove sensitive data
+ */
+function whx_sanitize_error($message) {
+  // Remove potential API keys, tokens, emails
+  $message = preg_replace('/[a-f0-9]{32,}/i', '[REDACTED]', $message);
+  $message = preg_replace('/Bearer\s+[^\s]+/i', 'Bearer [REDACTED]', $message);
+  $message = preg_replace('/[\w\-\.]+@[\w\-\.]+/i', '[EMAIL_REDACTED]', $message);
+  return $message;
+}
+
+/**
+ * Audit log for credential changes
+ */
+function whx_audit_log($action, $details = '') {
+  $user = wp_get_current_user();
+  $log_entry = sprintf(
+    '[%s] User: %s (ID: %d) | Action: %s | Details: %s | IP: %s',
+    current_time('mysql'),
+    $user->user_login,
+    $user->ID,
+    $action,
+    $details,
+    $_SERVER['REMOTE_ADDR'] ?? 'Unknown'
+  );
+  error_log('WHX_AUDIT: ' . $log_entry);
+}
+
+/**
+ * Rate limiting check
+ */
+function whx_rate_limit($action, $limit = 5, $window = 60) {
+  $key = 'whx_ratelimit_' . $action . '_' . get_current_user_id();
+  $count = get_transient($key) ?: 0;
+
+  if ($count >= $limit) {
+    return false; // Rate limit exceeded
+  }
+
+  set_transient($key, $count + 1, $window);
+  return true;
+}
 
 /* ---------------- Options ---------------- */
 function whx_opt_name(){ return 'whx_whmcs_core'; }
@@ -28,19 +101,55 @@ function whx_defaults(){
     'cf_email'    => '',
     'cf_api_key'  => '',
     'cf_api_token'=> '',
+    'cf_verified_at' => 0,
+    'cf_last_error' => '',
     'bunny_access_key' => '',
     'bunny_zone_id'    => '',
+    'bunny_verified_at' => 0,
+    'bunny_last_error' => '',
     'auto_clear_cache' => 0,
   ];
 }
 function whx_get_opts(){
   $o = get_option(whx_opt_name(), []);
-  return is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
+  $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
+
+  // Decrypt sensitive fields
+  if (!empty($opts['secret'])) {
+    $opts['secret'] = whx_decrypt($opts['secret']);
+  }
+  if (!empty($opts['cf_api_key'])) {
+    $opts['cf_api_key'] = whx_decrypt($opts['cf_api_key']);
+  }
+  if (!empty($opts['cf_api_token'])) {
+    $opts['cf_api_token'] = whx_decrypt($opts['cf_api_token']);
+  }
+  if (!empty($opts['bunny_access_key'])) {
+    $opts['bunny_access_key'] = whx_decrypt($opts['bunny_access_key']);
+  }
+
+  return $opts;
 }
 function whx_update_opts($o){
   $n = whx_opt_name();
-  if (get_option($n, null) === null) add_option($n, $o, '', 'no');
-  else update_option($n, $o, false);
+
+  // Encrypt sensitive fields before storage
+  $encrypted = $o;
+  if (!empty($encrypted['secret'])) {
+    $encrypted['secret'] = whx_encrypt($encrypted['secret']);
+  }
+  if (!empty($encrypted['cf_api_key'])) {
+    $encrypted['cf_api_key'] = whx_encrypt($encrypted['cf_api_key']);
+  }
+  if (!empty($encrypted['cf_api_token'])) {
+    $encrypted['cf_api_token'] = whx_encrypt($encrypted['cf_api_token']);
+  }
+  if (!empty($encrypted['bunny_access_key'])) {
+    $encrypted['bunny_access_key'] = whx_encrypt($encrypted['bunny_access_key']);
+  }
+
+  if (get_option($n, null) === null) add_option($n, $encrypted, '', 'no');
+  else update_option($n, $encrypted, false);
 }
 
 /* -------- Domain-aware defaults (multi-market) -------- */
@@ -126,12 +235,16 @@ add_action('admin_init', function(){
   // Cache Clearing Section
   add_settings_section('whx_cache','Cache Clearing','whx_cache_section_desc','whx-whmcs-core');
   add_settings_field('auto_clear_cache','Auto-clear cache','whx_field_checkbox','whx-whmcs-core','whx_cache',['key'=>'auto_clear_cache','label'=>'Automatically clear cache when settings are saved']);
-  add_settings_field('cf_zone_id','Cloudflare Zone ID','whx_field','whx-whmcs-core','whx_cache',['key'=>'cf_zone_id','placeholder'=>'Optional – for Cloudflare cache clearing']);
-  add_settings_field('cf_api_token','Cloudflare API Token','whx_field','whx-whmcs-core','whx_cache',['key'=>'cf_api_token','placeholder'=>'Preferred – API Token with Cache Purge permission']);
+
+  // Cloudflare subsection
+  add_settings_field('cf_zone_id','Cloudflare Zone ID','whx_field','whx-whmcs-core','whx_cache',['key'=>'cf_zone_id','placeholder'=>'e.g., a1b2c3d4e5f6...']);
+  add_settings_field('cf_api_token','Cloudflare API Token','whx_field_password','whx-whmcs-core','whx_cache',['key'=>'cf_api_token','placeholder'=>'Preferred – API Token with Cache Purge permission']);
   add_settings_field('cf_email','Cloudflare Email','whx_field','whx-whmcs-core','whx_cache',['key'=>'cf_email','type'=>'email','placeholder'=>'Alternative – use with Global API Key']);
-  add_settings_field('cf_api_key','Cloudflare Global API Key','whx_field','whx-whmcs-core','whx_cache',['key'=>'cf_api_key','placeholder'=>'Alternative – use with Email']);
-  add_settings_field('bunny_access_key','Bunny CDN Access Key','whx_field','whx-whmcs-core','whx_cache',['key'=>'bunny_access_key','placeholder'=>'Optional – Bunny CDN API Key']);
-  add_settings_field('bunny_zone_id','Bunny CDN Pull Zone ID','whx_field','whx-whmcs-core','whx_cache',['key'=>'bunny_zone_id','placeholder'=>'Optional – Pull Zone ID or hostname']);
+  add_settings_field('cf_api_key','Cloudflare Global API Key','whx_field_password','whx-whmcs-core','whx_cache',['key'=>'cf_api_key','placeholder'=>'Alternative – use with Email']);
+
+  // Bunny CDN subsection
+  add_settings_field('bunny_access_key','Bunny CDN Access Key','whx_field_password','whx-whmcs-core','whx_cache',['key'=>'bunny_access_key','placeholder'=>'Account API Key']);
+  add_settings_field('bunny_zone_id','Bunny CDN Pull Zone ID','whx_field','whx-whmcs-core','whx_cache',['key'=>'bunny_zone_id','placeholder'=>'Pull Zone ID (numeric)']);
 });
 
 function whx_cache_section_desc(){
@@ -152,24 +265,82 @@ function whx_render(){
     if ($code==='cur_err')echo '<div class="notice notice-error"><p><strong>Could not load currencies:</strong> '.esc_html($o['last_error']?:'Unknown error').'</p></div>';
     if ($code==='cache_ok') echo '<div class="notice notice-success"><p><strong>Cache cleared.</strong> All available caches have been cleared successfully.</p></div>';
     if ($code==='cache_partial') echo '<div class="notice notice-warning"><p><strong>Cache partially cleared.</strong> Some cache services may not have been cleared. Check error log for details.</p></div>';
+    if ($code==='cf_ok')   echo '<div class="notice notice-success"><p><strong>Cloudflare connected.</strong> API credentials verified successfully.</p></div>';
+    if ($code==='cf_err')  echo '<div class="notice notice-error"><p><strong>Cloudflare connection failed:</strong> '.esc_html($o['cf_last_error']?:'Unknown error').'</p></div>';
+    if ($code==='bunny_ok')  echo '<div class="notice notice-success"><p><strong>Bunny CDN connected.</strong> API credentials verified successfully.</p></div>';
+    if ($code==='bunny_err') echo '<div class="notice notice-error"><p><strong>Bunny CDN connection failed:</strong> '.esc_html($o['bunny_last_error']?:'Unknown error').'</p></div>';
+    if ($code==='rate_limit') echo '<div class="notice notice-warning"><p><strong>Rate limit exceeded.</strong> Please wait a moment before trying again.</p></div>';
   }
 
-  // Badge
+  // WHMCS Badge
   $status = 'not-verified';
   if ($o['verified_at']) $status = 'valid';
   if ($o['last_error'])  $status = 'invalid';
-  $badge = [
+  $whmcs_badge = [
     'valid'=>'<span style="margin-left:8px;padding:2px 8px;background:#46b450;color:#fff;border-radius:3px;font-weight:600;">Valid</span>',
     'invalid'=>'<span style="margin-left:8px;padding:2px 8px;background:#dc3232;color:#fff;border-radius:3px;font-weight:600;">Invalid</span>',
     'not-verified'=>'<span style="margin-left:8px;padding:2px 8px;background:#999;color:#fff;border-radius:3px;font-weight:600;">Not verified</span>',
   ][$status];
-  $hint = $o['verified_at'] ? '<em>Last verified '.human_time_diff($o['verified_at'], current_time('timestamp')).' ago</em>' : '';
+  $whmcs_hint = $o['verified_at'] ? '<em>Last verified '.human_time_diff($o['verified_at'], current_time('timestamp')).' ago</em>' : '';
 
-  echo '<div class="wrap"><h1>WHMCS Core '.$badge.' '.$hint.'</h1>';
+  echo '<div class="wrap"><h1>WHMCS Core '.$whmcs_badge.' '.$whmcs_hint.'</h1>';
 
-  // Buttons
+  // Service Status Section
+  echo '<div style="background:#f9f9f9;padding:15px;margin:15px 0;border-left:4px solid #0073aa;border-radius:3px;">';
+  echo '<h3 style="margin-top:0;">Service Connections</h3>';
+  echo '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px;">';
+
+  // Cloudflare Status
+  $cf_status = 'not-configured';
+  if (!empty($o['cf_zone_id'])) {
+    $cf_status = 'not-verified';
+    if ($o['cf_verified_at']) $cf_status = 'valid';
+    if ($o['cf_last_error']) $cf_status = 'invalid';
+  }
+  $cf_badge = [
+    'valid'=>'<span style="padding:2px 8px;background:#46b450;color:#fff;border-radius:3px;font-size:12px;font-weight:600;">✓ Connected</span>',
+    'invalid'=>'<span style="padding:2px 8px;background:#dc3232;color:#fff;border-radius:3px;font-size:12px;font-weight:600;">✗ Failed</span>',
+    'not-verified'=>'<span style="padding:2px 8px;background:#ffb900;color:#fff;border-radius:3px;font-size:12px;font-weight:600;">⚠ Not Tested</span>',
+    'not-configured'=>'<span style="padding:2px 8px;background:#999;color:#fff;border-radius:3px;font-size:12px;font-weight:600;">Not Configured</span>',
+  ][$cf_status];
+  $cf_hint = $o['cf_verified_at'] ? '<small>Verified '.human_time_diff($o['cf_verified_at'], current_time('timestamp')).' ago</small>' : '';
+
+  echo '<div style="background:#fff;padding:12px;border:1px solid #ddd;border-radius:3px;">';
+  echo '<strong>Cloudflare CDN</strong><br>'.$cf_badge;
+  if ($cf_hint) echo '<br>'.$cf_hint;
+  if ($cf_status !== 'not-configured') {
+    echo '<br><a class="button button-small" style="margin-top:8px;" href="'.esc_url(whx_test_cloudflare_url()).'">Test Connection</a>';
+  }
+  echo '</div>';
+
+  // Bunny CDN Status
+  $bunny_status = 'not-configured';
+  if (!empty($o['bunny_access_key']) && !empty($o['bunny_zone_id'])) {
+    $bunny_status = 'not-verified';
+    if ($o['bunny_verified_at']) $bunny_status = 'valid';
+    if ($o['bunny_last_error']) $bunny_status = 'invalid';
+  }
+  $bunny_badge = [
+    'valid'=>'<span style="padding:2px 8px;background:#46b450;color:#fff;border-radius:3px;font-size:12px;font-weight:600;">✓ Connected</span>',
+    'invalid'=>'<span style="padding:2px 8px;background:#dc3232;color:#fff;border-radius:3px;font-size:12px;font-weight:600;">✗ Failed</span>',
+    'not-verified'=>'<span style="padding:2px 8px;background:#ffb900;color:#fff;border-radius:3px;font-size:12px;font-weight:600;">⚠ Not Tested</span>',
+    'not-configured'=>'<span style="padding:2px 8px;background:#999;color:#fff;border-radius:3px;font-size:12px;font-weight:600;">Not Configured</span>',
+  ][$bunny_status];
+  $bunny_hint = $o['bunny_verified_at'] ? '<small>Verified '.human_time_diff($o['bunny_verified_at'], current_time('timestamp')).' ago</small>' : '';
+
+  echo '<div style="background:#fff;padding:12px;border:1px solid #ddd;border-radius:3px;">';
+  echo '<strong>Bunny CDN</strong><br>'.$bunny_badge;
+  if ($bunny_hint) echo '<br>'.$bunny_hint;
+  if ($bunny_status !== 'not-configured') {
+    echo '<br><a class="button button-small" style="margin-top:8px;" href="'.esc_url(whx_test_bunny_url()).'">Test Connection</a>';
+  }
+  echo '</div>';
+
+  echo '</div></div>'; // Close status grid and container
+
+  // Main Action Buttons
   echo '<p style="margin:8px 0 16px 0">';
-  echo '<a class="button button-secondary" href="'.esc_url(whx_test_url()).'">Test Connection</a> ';
+  echo '<a class="button button-secondary" href="'.esc_url(whx_test_url()).'">Test WHMCS</a> ';
   echo '<a class="button" href="'.esc_url(whx_fetch_currencies_url()).'">Fetch Currencies</a> ';
   echo '<a class="button button-primary" href="'.esc_url(whx_clear_cache_url()).'">Clear All Caches</a>';
   echo '</p>';
@@ -179,7 +350,11 @@ function whx_render(){
   echo '</form>';
 
   if ($o['last_error'])
-    echo '<p style="margin-top:12px;color:#dc3232;"><strong>Last error:</strong> '.esc_html($o['last_error']).'</p>';
+    echo '<p style="margin-top:12px;color:#dc3232;"><strong>WHMCS Error:</strong> '.esc_html($o['last_error']).'</p>';
+  if ($o['cf_last_error'])
+    echo '<p style="margin-top:12px;color:#dc3232;"><strong>Cloudflare Error:</strong> '.esc_html($o['cf_last_error']).'</p>';
+  if ($o['bunny_last_error'])
+    echo '<p style="margin-top:12px;color:#dc3232;"><strong>Bunny CDN Error:</strong> '.esc_html($o['bunny_last_error']).'</p>';
   echo '</div>';
 }
 
@@ -202,6 +377,23 @@ function whx_field_checkbox($args){
   $o = whx_get_opts(); $k=$args['key']; $label=$args['label']??''; $checked = !empty($o[$k]) ? 'checked' : '';
   echo '<label><input type="checkbox" name="'.esc_attr(whx_opt_name()).'['.$k.']" value="1" '.$checked.'> '.esc_html($label).'</label>';
 }
+function whx_field_password($args){
+  $o = whx_get_opts(); $k=$args['key']; $ph=$args['placeholder']??'';
+  $is_set = !empty($o[$k]);
+  $label = $is_set ? 'set' : 'not set';
+  $color = $is_set ? '#46b450' : '#999';
+
+  // Special handling for Cloudflare/Bunny to show error state
+  if ($k === 'cf_api_token' || $k === 'cf_api_key') {
+    if ($is_set && !empty($o['cf_last_error'])) { $label='auth failed'; $color='#dc3232'; }
+  } elseif ($k === 'bunny_access_key') {
+    if ($is_set && !empty($o['bunny_last_error'])) { $label='auth failed'; $color='#dc3232'; }
+  }
+
+  $badge = '<span style="margin-left:8px;padding:2px 8px;background:'.$color.';color:#fff;border-radius:3px;font-weight:600;">'.$label.'</span>';
+  echo '<input type="password" name="'.esc_attr(whx_opt_name()).'['.$k.']" value="" class="regular-text" autocomplete="new-password" placeholder="'.esc_attr($ph).'" />'.$badge;
+  if ($is_set) echo '<br><small style="color:#666;">Leave blank to keep current value</small>';
+}
 
 /* -------------- Save + validate + auto-test + auto-fetch -------------- */
 function whx_sanitize($in){
@@ -210,18 +402,46 @@ function whx_sanitize($in){
   $out['endpoint']   = isset($in['endpoint']) ? esc_url_raw(trim($in['endpoint'])) : $cur['endpoint'];
   $out['identifier'] = isset($in['identifier']) ? sanitize_text_field(trim($in['identifier'])) : $cur['identifier'];
   $out['accesskey']  = isset($in['accesskey']) ? sanitize_text_field(trim($in['accesskey'])) : $cur['accesskey'];
+
+  // Handle WHMCS secret (encrypted password field)
   $secret_changed = false;
-  if (isset($in['secret']) && trim($in['secret'])!=='') { $out['secret'] = sanitize_text_field(trim($in['secret'])); $secret_changed = true; }
+  if (isset($in['secret']) && trim($in['secret'])!=='') {
+    $out['secret'] = sanitize_text_field(trim($in['secret']));
+    $secret_changed = true;
+    whx_audit_log('WHMCS Secret Updated', 'Secret credentials changed');
+  }
+
   $out['timeout']    = isset($in['timeout']) ? max(3,min(60,(int)$in['timeout'])) : $cur['timeout'];
 
   // Cache settings
   $out['auto_clear_cache'] = isset($in['auto_clear_cache']) ? 1 : 0;
   $out['cf_zone_id']  = isset($in['cf_zone_id']) ? sanitize_text_field(trim($in['cf_zone_id'])) : $cur['cf_zone_id'];
   $out['cf_email']    = isset($in['cf_email']) ? sanitize_email(trim($in['cf_email'])) : $cur['cf_email'];
-  $out['cf_api_key']  = isset($in['cf_api_key']) ? sanitize_text_field(trim($in['cf_api_key'])) : $cur['cf_api_key'];
-  $out['cf_api_token']= isset($in['cf_api_token']) ? sanitize_text_field(trim($in['cf_api_token'])) : $cur['cf_api_token'];
-  $out['bunny_access_key'] = isset($in['bunny_access_key']) ? sanitize_text_field(trim($in['bunny_access_key'])) : $cur['bunny_access_key'];
-  $out['bunny_zone_id']    = isset($in['bunny_zone_id']) ? sanitize_text_field(trim($in['bunny_zone_id'])) : $cur['bunny_zone_id'];
+
+  // Handle Cloudflare API Key (encrypted password field)
+  $cf_changed = false;
+  if (isset($in['cf_api_key']) && trim($in['cf_api_key'])!=='') {
+    $out['cf_api_key'] = sanitize_text_field(trim($in['cf_api_key']));
+    $cf_changed = true;
+    whx_audit_log('Cloudflare API Key Updated', 'Global API Key changed');
+  }
+
+  // Handle Cloudflare API Token (encrypted password field)
+  if (isset($in['cf_api_token']) && trim($in['cf_api_token'])!=='') {
+    $out['cf_api_token'] = sanitize_text_field(trim($in['cf_api_token']));
+    $cf_changed = true;
+    whx_audit_log('Cloudflare API Token Updated', 'API Token changed');
+  }
+
+  // Handle Bunny CDN Access Key (encrypted password field)
+  $bunny_changed = false;
+  if (isset($in['bunny_access_key']) && trim($in['bunny_access_key'])!=='') {
+    $out['bunny_access_key'] = sanitize_text_field(trim($in['bunny_access_key']));
+    $bunny_changed = true;
+    whx_audit_log('Bunny CDN Key Updated', 'Access Key changed');
+  }
+
+  $out['bunny_zone_id'] = isset($in['bunny_zone_id']) ? sanitize_text_field(trim($in['bunny_zone_id'])) : $cur['bunny_zone_id'];
 
   if (isset($in['currencyids']) && trim($in['currencyids'])!=='') {
     $map = json_decode(trim($in['currencyids']), true);
@@ -268,6 +488,7 @@ function whx_sanitize($in){
 function whx_quick_test($cfg,$currencyId){
   $r = wp_remote_post($cfg['endpoint'], [
     'timeout'=>(int)$cfg['timeout'],
+    'sslverify'=>true,
     'body' => [
       'action'=>'GetTLDPricing',
       'identifier'=>$cfg['identifier'],
@@ -277,11 +498,11 @@ function whx_quick_test($cfg,$currencyId){
       'responsetype'=>'json'
     ]
   ]);
-  if (is_wp_error($r)) return $r->get_error_message();
+  if (is_wp_error($r)) return whx_sanitize_error($r->get_error_message());
   $j = json_decode(wp_remote_retrieve_body($r), true);
   if (!is_array($j)) return 'Non-JSON response';
   if (!empty($j['pricing'])) return true;
-  if (!empty($j['message'])) return $j['message'];
+  if (!empty($j['message'])) return whx_sanitize_error($j['message']);
   return 'Unexpected response';
 }
 add_action('admin_notices', function(){
@@ -311,11 +532,176 @@ add_action('admin_post_whx_fetch_currencies', function(){
 function whx_clear_cache_url(){ return wp_nonce_url(admin_url('admin-post.php?action=whx_clear_cache'), 'whx_clear_cache'); }
 add_action('admin_post_whx_clear_cache', function(){
   if (!current_user_can('manage_options') || !check_admin_referer('whx_clear_cache')) wp_die('Not allowed.');
+
+  // Rate limiting
+  if (!whx_rate_limit('clear_cache', 10, 60)) {
+    wp_safe_redirect(add_query_arg('whx_notice', 'rate_limit', admin_url('admin.php?page=whx-whmcs-core')));
+    exit;
+  }
+
   $result = whx_clear_cache();
   $notice = $result['success'] ? 'cache_ok' : 'cache_partial';
+  whx_audit_log('Cache Cleared', 'Manual cache clear triggered');
   wp_safe_redirect(add_query_arg('whx_notice', $notice, admin_url('admin.php?page=whx-whmcs-core')));
   exit;
 });
+
+// Cloudflare test connection
+function whx_test_cloudflare_url(){ return wp_nonce_url(admin_url('admin-post.php?action=whx_test_cloudflare'), 'whx_test_cloudflare'); }
+add_action('admin_post_whx_test_cloudflare', function(){
+  if (!current_user_can('manage_options') || !check_admin_referer('whx_test_cloudflare')) wp_die('Not allowed.');
+
+  // Rate limiting
+  if (!whx_rate_limit('test_cloudflare', 5, 60)) {
+    wp_safe_redirect(add_query_arg('whx_notice', 'rate_limit', admin_url('admin.php?page=whx-whmcs-core')));
+    exit;
+  }
+
+  $o = whx_get_opts();
+  $test = whx_test_cloudflare_connection($o);
+
+  if ($test === true) {
+    $o['cf_verified_at'] = current_time('timestamp');
+    $o['cf_last_error'] = '';
+    whx_update_opts($o);
+    whx_audit_log('Cloudflare Test Success', 'Cloudflare connection verified');
+    wp_safe_redirect(add_query_arg('whx_notice', 'cf_ok', admin_url('admin.php?page=whx-whmcs-core')));
+  } else {
+    $o['cf_last_error'] = is_string($test) ? $test : 'Unknown error';
+    whx_update_opts($o);
+    whx_audit_log('Cloudflare Test Failed', whx_sanitize_error($o['cf_last_error']));
+    wp_safe_redirect(add_query_arg('whx_notice', 'cf_err', admin_url('admin.php?page=whx-whmcs-core')));
+  }
+  exit;
+});
+
+// Bunny CDN test connection
+function whx_test_bunny_url(){ return wp_nonce_url(admin_url('admin-post.php?action=whx_test_bunny'), 'whx_test_bunny'); }
+add_action('admin_post_whx_test_bunny', function(){
+  if (!current_user_can('manage_options') || !check_admin_referer('whx_test_bunny')) wp_die('Not allowed.');
+
+  // Rate limiting
+  if (!whx_rate_limit('test_bunny', 5, 60)) {
+    wp_safe_redirect(add_query_arg('whx_notice', 'rate_limit', admin_url('admin.php?page=whx-whmcs-core')));
+    exit;
+  }
+
+  $o = whx_get_opts();
+  $test = whx_test_bunny_connection($o);
+
+  if ($test === true) {
+    $o['bunny_verified_at'] = current_time('timestamp');
+    $o['bunny_last_error'] = '';
+    whx_update_opts($o);
+    whx_audit_log('Bunny CDN Test Success', 'Bunny CDN connection verified');
+    wp_safe_redirect(add_query_arg('whx_notice', 'bunny_ok', admin_url('admin.php?page=whx-whmcs-core')));
+  } else {
+    $o['bunny_last_error'] = is_string($test) ? $test : 'Unknown error';
+    whx_update_opts($o);
+    whx_audit_log('Bunny CDN Test Failed', whx_sanitize_error($o['bunny_last_error']));
+    wp_safe_redirect(add_query_arg('whx_notice', 'bunny_err', admin_url('admin.php?page=whx-whmcs-core')));
+  }
+  exit;
+});
+
+/* -------------- Test Connection Functions -------------- */
+
+/**
+ * Test Cloudflare API connection
+ */
+function whx_test_cloudflare_connection($opts) {
+  $zone_id = $opts['cf_zone_id'] ?? '';
+  $api_token = $opts['cf_api_token'] ?? '';
+  $email = $opts['cf_email'] ?? '';
+  $api_key = $opts['cf_api_key'] ?? '';
+
+  if (empty($zone_id)) {
+    return 'Zone ID is required';
+  }
+
+  // Determine authentication method
+  $headers = ['Content-Type' => 'application/json'];
+  if (!empty($api_token)) {
+    $headers['Authorization'] = 'Bearer ' . $api_token;
+  } elseif (!empty($email) && !empty($api_key)) {
+    $headers['X-Auth-Email'] = $email;
+    $headers['X-Auth-Key'] = $api_key;
+  } else {
+    return 'API Token or (Email + API Key) required';
+  }
+
+  // Verify zone access
+  $response = wp_remote_get(
+    "https://api.cloudflare.com/client/v4/zones/{$zone_id}",
+    [
+      'headers' => $headers,
+      'timeout' => 15,
+      'sslverify' => true,
+    ]
+  );
+
+  if (is_wp_error($response)) {
+    return whx_sanitize_error($response->get_error_message());
+  }
+
+  $body = json_decode(wp_remote_retrieve_body($response), true);
+
+  if (isset($body['success']) && $body['success']) {
+    return true;
+  }
+
+  if (isset($body['errors'][0]['message'])) {
+    return whx_sanitize_error($body['errors'][0]['message']);
+  }
+
+  return 'Unable to verify Cloudflare credentials';
+}
+
+/**
+ * Test Bunny CDN API connection
+ */
+function whx_test_bunny_connection($opts) {
+  $access_key = $opts['bunny_access_key'] ?? '';
+  $zone_id = $opts['bunny_zone_id'] ?? '';
+
+  if (empty($access_key) || empty($zone_id)) {
+    return 'Access Key and Pull Zone ID required';
+  }
+
+  // Get pull zone info
+  $response = wp_remote_get(
+    "https://api.bunny.net/pullzone/{$zone_id}",
+    [
+      'headers' => [
+        'AccessKey' => $access_key,
+        'Content-Type' => 'application/json',
+      ],
+      'timeout' => 15,
+      'sslverify' => true,
+    ]
+  );
+
+  if (is_wp_error($response)) {
+    return whx_sanitize_error($response->get_error_message());
+  }
+
+  $status_code = wp_remote_retrieve_response_code($response);
+
+  if ($status_code === 200) {
+    return true;
+  }
+
+  if ($status_code === 401 || $status_code === 403) {
+    return 'Authentication failed - Invalid Access Key';
+  }
+
+  if ($status_code === 404) {
+    return 'Pull Zone not found - Invalid Zone ID';
+  }
+
+  $body = wp_remote_retrieve_body($response);
+  return 'HTTP ' . $status_code . ': ' . whx_sanitize_error($body);
+}
 
 /* -------------- Fetch currencies (shared) -------------- */
 function whx_parse_currencies($json){
@@ -333,6 +719,7 @@ function whx_fetch_currencies_now($cfg){
   if (empty($cfg['endpoint']) || empty($cfg['identifier']) || empty($cfg['secret'])) return 'Missing endpoint/identifier/secret';
   $r = wp_remote_post($cfg['endpoint'], [
     'timeout'=>(int)$cfg['timeout'],
+    'sslverify'=>true,
     'body'=>[
       'action'=>'GetCurrencies',
       'identifier'=>$cfg['identifier'],
@@ -341,7 +728,7 @@ function whx_fetch_currencies_now($cfg){
       'responsetype'=>'json'
     ]
   ]);
-  if (is_wp_error($r)) return $r->get_error_message();
+  if (is_wp_error($r)) return whx_sanitize_error($r->get_error_message());
   $j = json_decode(wp_remote_retrieve_body($r), true);
   if (!is_array($j)) return 'Non-JSON response';
   if (!empty($j['message']) && stripos($j['message'],'auth')!==false) return 'Authentication failed – check API user/IP allowlist';
@@ -404,11 +791,18 @@ function whx_clear_cache() {
 function whx_clear_transients() {
   global $wpdb;
 
-  // Delete all WHX transients
-  $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_whx_%' OR option_name LIKE '_transient_timeout_whx_%'");
+  // Delete all WHX transients using prepared statements for security
+  $wpdb->query($wpdb->prepare(
+    "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+    '_transient_whx_%',
+    '_transient_timeout_whx_%'
+  ));
 
   // Also clear any locked transients
-  $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE '_transient_whx_%_lock'");
+  $wpdb->query($wpdb->prepare(
+    "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s",
+    '_transient_whx_%_lock'
+  ));
 }
 
 /**
@@ -552,22 +946,25 @@ function whx_clear_cloudflare_cache($results) {
       'headers' => $headers,
       'body'    => wp_json_encode(['purge_everything' => true]),
       'timeout' => 30,
+      'sslverify' => true,
     ]
   );
 
   if (is_wp_error($response)) {
-    $results['failed'][] = 'Cloudflare: ' . $response->get_error_message();
+    $sanitized_error = whx_sanitize_error($response->get_error_message());
+    $results['failed'][] = 'Cloudflare: ' . $sanitized_error;
     $results['success'] = false;
-    error_log('Cloudflare cache clear failed: ' . $response->get_error_message());
+    error_log('WHX: Cloudflare cache clear failed: ' . $sanitized_error);
   } else {
     $body = json_decode(wp_remote_retrieve_body($response), true);
     if (isset($body['success']) && $body['success']) {
       $results['cleared'][] = 'Cloudflare CDN';
     } else {
       $error_msg = isset($body['errors'][0]['message']) ? $body['errors'][0]['message'] : 'Unknown error';
-      $results['failed'][] = 'Cloudflare: ' . $error_msg;
+      $sanitized_error = whx_sanitize_error($error_msg);
+      $results['failed'][] = 'Cloudflare: ' . $sanitized_error;
       $results['success'] = false;
-      error_log('Cloudflare cache clear failed: ' . $error_msg);
+      error_log('WHX: Cloudflare cache clear failed: ' . $sanitized_error);
     }
   }
 
@@ -597,22 +994,25 @@ function whx_clear_bunny_cache($results) {
         'Content-Type' => 'application/json',
       ],
       'timeout' => 30,
+      'sslverify' => true,
     ]
   );
 
   if (is_wp_error($response)) {
-    $results['failed'][] = 'Bunny CDN: ' . $response->get_error_message();
+    $sanitized_error = whx_sanitize_error($response->get_error_message());
+    $results['failed'][] = 'Bunny CDN: ' . $sanitized_error;
     $results['success'] = false;
-    error_log('Bunny CDN cache clear failed: ' . $response->get_error_message());
+    error_log('WHX: Bunny CDN cache clear failed: ' . $sanitized_error);
   } else {
     $status_code = wp_remote_retrieve_response_code($response);
     if ($status_code === 200 || $status_code === 204) {
       $results['cleared'][] = 'Bunny CDN';
     } else {
       $body = wp_remote_retrieve_body($response);
+      $sanitized_error = whx_sanitize_error($body);
       $results['failed'][] = 'Bunny CDN: HTTP ' . $status_code;
       $results['success'] = false;
-      error_log('Bunny CDN cache clear failed: HTTP ' . $status_code . ' - ' . $body);
+      error_log('WHX: Bunny CDN cache clear failed: HTTP ' . $status_code . ' - ' . $sanitized_error);
     }
   }
 
@@ -637,7 +1037,7 @@ function whx_currency_id($code='USD'){ $m=whx_config()['currency']; return (int)
 function whx_request($action,$params=[]){
   $c=whx_config(); if(!$c['endpoint']||!$c['id']||!$c['secret']) return [];
   $b=array_merge(['action'=>$action,'identifier'=>$c['id'],'secret'=>$c['secret'],'accesskey'=>$c['accesskey'],'responsetype'=>'json'],$params);
-  $r=wp_remote_post($c['endpoint'],['timeout'=>$c['timeout'],'body'=>$b]); if(is_wp_error($r)) return [];
+  $r=wp_remote_post($c['endpoint'],['timeout'=>$c['timeout'],'sslverify'=>true,'body'=>$b]); if(is_wp_error($r)) return [];
   $j=json_decode(wp_remote_retrieve_body($r),true); return is_array($j)?$j:[];
 }
 function whx_get_tld_pricing($currency=null,$ttl=30){
