@@ -1,154 +1,359 @@
 /**
  * WHX Promo Cards v9.9.9
  * Professional promo card display with WHMCS integration
- * Requires: WHX WHMCS Core (handles caching and API calls)
+ * Uses WHMCS Core caching (no custom caching layer)
+ * Requires: WHX WHMCS Core plugin
  */
 
-if (!defined('ABSPATH')) exit;
+if (!defined('ABSPATH')) die('Direct access not permitted');
 
 // ============================================================================
-// ADMIN UI
+// ADMIN MENU & SETTINGS
 // ============================================================================
 
-add_action('admin_menu', function(){
-	add_submenu_page(
-		'whx-whmcs-core',
-		'Promo Cards',
-		'Promo Cards',
-		'manage_options',
-		'whx-promo-cards',
-		'whx_promo_cards_page'
-	);
-});
-
-function whx_promo_cards_page(){
-	if (!current_user_can('manage_options')) return;
-
-	$tab = $_GET['tab'] ?? 'settings';
-
-	// Handle settings save
-	if (isset($_POST['whx_promo_save']) && check_admin_referer('whx_promo_settings')) {
-		whx_promo_save_settings($_POST);
-		echo '<div class="notice notice-success"><p>Settings saved.</p></div>';
-	}
-
-	$settings = whx_promo_get_settings();
-	?>
-	<div class="wrap">
-		<h1>WHX Promo Cards</h1>
-
-		<nav class="nav-tab-wrapper">
-			<a href="?page=whx-promo-cards&tab=settings" class="nav-tab <?php echo $tab==='settings'?'nav-tab-active':''; ?>">Settings</a>
-			<a href="?page=whx-promo-cards&tab=docs" class="nav-tab <?php echo $tab==='docs'?'nav-tab-active':''; ?>">Documentation</a>
-		</nav>
-
-		<div style="margin-top:20px;">
-			<?php if ($tab === 'settings'): ?>
-				<?php whx_promo_settings_tab($settings); ?>
-			<?php else: ?>
-				<?php whx_promo_docs_tab(); ?>
-			<?php endif; ?>
-		</div>
-	</div>
-	<?php
+add_action('admin_menu', 'whx_promo_admin_menu');
+function whx_promo_admin_menu() {
+    add_submenu_page(
+        'whx-whmcs-core',
+        'Promo Cards',
+        'Promo Cards',
+        'manage_options',
+        'whx-promo-cards',
+        'whx_promo_settings_page'
+    );
 }
 
-function whx_promo_settings_tab($settings){
-	?>
-	<form method="post">
-		<?php wp_nonce_field('whx_promo_settings'); ?>
-
-		<table class="form-table">
-			<tr>
-				<th>Enable Instant Filters</th>
-				<td>
-					<label>
-						<input type="checkbox" name="enable_filters" value="1" <?php checked($settings['enable_filters']); ?>>
-						Show filter tabs (All, Domains, Hosting, SSL, VPS, Email, Top Deals)
-					</label>
-				</td>
-			</tr>
-			<tr>
-				<th>Show Pricing</th>
-				<td>
-					<label>
-						<input type="checkbox" name="show_pricing" value="1" <?php checked($settings['show_pricing']); ?>>
-						Display product pricing on promo cards
-					</label>
-				</td>
-			</tr>
-			<tr>
-				<th>Preferred Billing Cycle</th>
-				<td>
-					<select name="preferred_cycle">
-						<option value="monthly" <?php selected($settings['preferred_cycle'], 'monthly'); ?>>Monthly</option>
-						<option value="quarterly" <?php selected($settings['preferred_cycle'], 'quarterly'); ?>>Quarterly</option>
-						<option value="semiannually" <?php selected($settings['preferred_cycle'], 'semiannually'); ?>>Semi-Annually</option>
-						<option value="annually" <?php selected($settings['preferred_cycle'], 'annually'); ?>>Annually</option>
-						<option value="biennially" <?php selected($settings['preferred_cycle'], 'biennially'); ?>>Biennially</option>
-					</select>
-				</td>
-			</tr>
-		</table>
-
-		<h2>Page Routes</h2>
-		<p class="description">Configure where promo cards link to. Use relative paths (/domains) or full URLs.</p>
-
-		<table class="form-table">
-			<?php
-			$routes = [
-				'domains' => 'Domains',
-				'hosting' => 'Hosting',
-				'ssl' => 'SSL Certificates',
-				'vps' => 'VPS',
-				'email' => 'Email',
-			];
-			foreach ($routes as $key => $label):
-			?>
-			<tr>
-				<th><?php echo $label; ?></th>
-				<td><input type="text" name="routes[<?php echo $key; ?>]" value="<?php echo esc_attr($settings['routes'][$key]); ?>" class="regular-text"></td>
-			</tr>
-			<?php endforeach; ?>
-		</table>
-
-		<?php submit_button('Save Settings', 'primary', 'whx_promo_save'); ?>
-	</form>
-	<?php
+function whx_promo_get_default_settings() {
+    return [
+        'routes' => [
+            // Domains
+            'domains' => '/cloud/cart.php?a=add&domain=register',
+            'domains_ke' => '/ke-domain',
+            'domains_transfer' => '/cloud/cart.php?a=add&domain=transfer',
+            'domains_free' => '/domains/free',
+            'domains_whois' => '/domains/whois',
+            // Hosting
+            'hosting' => '/hosting',
+            'hosting_cpanel' => '/hosting/cpanel',
+            'hosting_cyberpanel' => '/hosting/cyberpanel',
+            'hosting_windows' => '/hosting/windows',
+            'hosting_reseller' => '/hosting/reseller',
+            'hosting_free' => '/hosting/free',
+            'hosting_dedicated' => '/hosting/dedicated-servers',
+            'hosting_email' => '/hosting/email',
+            // VPS
+            'vps' => '/cloud/store/vps-hosting',
+            'vps_managed' => '/cloud/store/managed-vps',
+            // SSL
+            'ssl' => '/cloud/store/ssl-certificates',
+            // Other
+            'ai_builder' => '/ai-website-builder',
+            'online_store' => '/online-store',
+            'seo' => '/local-seo',
+            // WHMCS Fallbacks
+            'whmcs_cart' => '/cloud/cart.php',
+            'whmcs_store' => '/cloud/store',
+        ],
+        'badges' => [
+            'hot_threshold' => 40,
+            'ending_soon_days' => 7,
+            'enable_category_badge' => true,
+            'enable_hot_badge' => true,
+            'enable_ending_soon_badge' => true,
+            'enable_expired_badge' => true,
+        ],
+        'pricing' => [
+            'auto_detect' => true,
+            'preferred_cycle' => 'annually',
+            'show_pricing' => true,
+            'show_domain_pricing' => true,
+        ],
+        'filters' => [
+            'enable_filters' => true,
+            'show_all_tab' => true,
+            'show_domains_tab' => true,
+            'show_hosting_tab' => true,
+            'show_ssl_tab' => true,
+            'show_vps_tab' => true,
+            'show_email_tab' => true,
+            'show_black_friday_tab' => true,
+            'show_highest_discount_tab' => true,
+        ],
+    ];
 }
 
-function whx_promo_docs_tab(){
-	?>
-	<h2>Shortcode Usage</h2>
-	<p>Use <code>[whmcs_promos]</code> to display promotional offers.</p>
+function whx_promo_get_settings() {
+    $defaults = whx_promo_get_default_settings();
+    $saved = get_option('whx_promo_settings', []);
+    return array_replace_recursive($defaults, $saved);
+}
 
-	<h3>Examples</h3>
-	<table class="widefat">
-		<tr>
-			<th>Shortcode</th>
-			<th>Description</th>
-		</tr>
-		<tr>
-			<td><code>[whmcs_promos]</code></td>
-			<td>Show all active promotions</td>
-		</tr>
-		<tr>
-			<td><code>[whmcs_promos category="domains"]</code></td>
-			<td>Show only domain promotions</td>
-		</tr>
-		<tr>
-			<td><code>[whmcs_promos show_expired="no"]</code></td>
-			<td>Hide expired promotions</td>
-		</tr>
-		<tr>
-			<td><code>[whmcs_promos max_items="10"]</code></td>
-			<td>Limit to 10 promotions</td>
-		</tr>
-	</table>
+function whx_promo_settings_page() {
+    if (!current_user_can('manage_options')) return;
 
-	<h3>Promo Metadata (JSON in Notes Field)</h3>
-	<p>Add JSON to the WHMCS promo Notes field to control display:</p>
-	<pre style="background:#f5f5f5;padding:15px;border-radius:5px;">{
+    $tab = $_GET['tab'] ?? 'settings';
+
+    // Handle Form Submission
+    if (isset($_POST['whx_promo_save']) && check_admin_referer('whx_promo_settings')) {
+        $settings = whx_promo_get_default_settings();
+
+        // Routes
+        if (isset($_POST['routes'])) {
+            foreach ($_POST['routes'] as $key => $value) {
+                $settings['routes'][sanitize_key($key)] = sanitize_text_field($value);
+            }
+        }
+
+        // Badges
+        if (isset($_POST['badges'])) {
+            $settings['badges']['hot_threshold'] = absint($_POST['badges']['hot_threshold']);
+            $settings['badges']['ending_soon_days'] = absint($_POST['badges']['ending_soon_days']);
+            $settings['badges']['enable_category_badge'] = isset($_POST['badges']['enable_category_badge']);
+            $settings['badges']['enable_hot_badge'] = isset($_POST['badges']['enable_hot_badge']);
+            $settings['badges']['enable_ending_soon_badge'] = isset($_POST['badges']['enable_ending_soon_badge']);
+            $settings['badges']['enable_expired_badge'] = isset($_POST['badges']['enable_expired_badge']);
+        }
+
+        // Pricing
+        if (isset($_POST['pricing'])) {
+            $settings['pricing']['auto_detect'] = isset($_POST['pricing']['auto_detect']);
+            $settings['pricing']['show_pricing'] = isset($_POST['pricing']['show_pricing']);
+            $settings['pricing']['show_domain_pricing'] = isset($_POST['pricing']['show_domain_pricing']);
+            $settings['pricing']['preferred_cycle'] = sanitize_text_field($_POST['pricing']['preferred_cycle']);
+        }
+
+        // Filters
+        if (isset($_POST['filters'])) {
+            $settings['filters']['enable_filters'] = isset($_POST['filters']['enable_filters']);
+            $settings['filters']['show_all_tab'] = isset($_POST['filters']['show_all_tab']);
+            $settings['filters']['show_domains_tab'] = isset($_POST['filters']['show_domains_tab']);
+            $settings['filters']['show_hosting_tab'] = isset($_POST['filters']['show_hosting_tab']);
+            $settings['filters']['show_ssl_tab'] = isset($_POST['filters']['show_ssl_tab']);
+            $settings['filters']['show_vps_tab'] = isset($_POST['filters']['show_vps_tab']);
+            $settings['filters']['show_email_tab'] = isset($_POST['filters']['show_email_tab']);
+            $settings['filters']['show_black_friday_tab'] = isset($_POST['filters']['show_black_friday_tab']);
+            $settings['filters']['show_highest_discount_tab'] = isset($_POST['filters']['show_highest_discount_tab']);
+        }
+
+        update_option('whx_promo_settings', $settings);
+        echo '<div class="notice notice-success"><p>Settings saved.</p></div>';
+    }
+
+    $settings = whx_promo_get_settings();
+    ?>
+    <div class="wrap">
+        <h1>WHX Promo Cards v9.9.9</h1>
+
+        <nav class="nav-tab-wrapper">
+            <a href="?page=whx-promo-cards&tab=settings" class="nav-tab <?php echo $tab==='settings'?'nav-tab-active':''; ?>">Settings</a>
+            <a href="?page=whx-promo-cards&tab=docs" class="nav-tab <?php echo $tab==='docs'?'nav-tab-active':''; ?>">Documentation</a>
+        </nav>
+
+        <div style="margin-top:20px;">
+            <?php if ($tab === 'settings'): ?>
+                <?php whx_promo_render_settings_tab($settings); ?>
+            <?php else: ?>
+                <?php whx_promo_render_docs_tab(); ?>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php
+}
+
+function whx_promo_render_settings_tab($settings) {
+    ?>
+    <form method="post">
+        <?php wp_nonce_field('whx_promo_settings'); ?>
+
+        <!-- Pricing Settings -->
+        <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h2>Pricing Settings</h2>
+            <table class="form-table">
+                <tr>
+                    <th>Enable Auto Pricing</th>
+                    <td>
+                        <label><input type="checkbox" name="pricing[auto_detect]" <?php checked($settings['pricing']['auto_detect']); ?>> Automatically detect and display product pricing</label>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Show Product Pricing</th>
+                    <td>
+                        <label><input type="checkbox" name="pricing[show_pricing]" <?php checked($settings['pricing']['show_pricing']); ?>> Display pricing on hosting/VPS/SSL cards</label>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Show Domain Pricing</th>
+                    <td>
+                        <label><input type="checkbox" name="pricing[show_domain_pricing]" <?php checked($settings['pricing']['show_domain_pricing']); ?>> Display pricing on domain cards</label>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Preferred Billing Cycle</th>
+                    <td>
+                        <select name="pricing[preferred_cycle]">
+                            <option value="monthly" <?php selected($settings['pricing']['preferred_cycle'], 'monthly'); ?>>Monthly</option>
+                            <option value="quarterly" <?php selected($settings['pricing']['preferred_cycle'], 'quarterly'); ?>>Quarterly</option>
+                            <option value="semiannually" <?php selected($settings['pricing']['preferred_cycle'], 'semiannually'); ?>>Semi-Annually</option>
+                            <option value="annually" <?php selected($settings['pricing']['preferred_cycle'], 'annually'); ?>>Annually</option>
+                            <option value="biennially" <?php selected($settings['pricing']['preferred_cycle'], 'biennially'); ?>>Biennially</option>
+                            <option value="triennially" <?php selected($settings['pricing']['preferred_cycle'], 'triennially'); ?>>Triennially</option>
+                        </select>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Badge Settings -->
+        <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h2>Badge Settings</h2>
+            <table class="form-table">
+                <tr>
+                    <th>Hot Badge Threshold</th>
+                    <td>
+                        <input type="number" name="badges[hot_threshold]" value="<?php echo esc_attr($settings['badges']['hot_threshold']); ?>" min="1" max="100" class="small-text"> %
+                        <p class="description">Show "HOT" badge for discounts above this percentage</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Ending Soon Days</th>
+                    <td>
+                        <input type="number" name="badges[ending_soon_days]" value="<?php echo esc_attr($settings['badges']['ending_soon_days']); ?>" min="1" max="30" class="small-text"> days
+                        <p class="description">Show "Ending Soon" for promos expiring within this many days</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Enable Badges</th>
+                    <td>
+                        <label><input type="checkbox" name="badges[enable_category_badge]" <?php checked($settings['badges']['enable_category_badge']); ?>> Category Badge</label><br>
+                        <label><input type="checkbox" name="badges[enable_hot_badge]" <?php checked($settings['badges']['enable_hot_badge']); ?>> Hot Badge</label><br>
+                        <label><input type="checkbox" name="badges[enable_ending_soon_badge]" <?php checked($settings['badges']['enable_ending_soon_badge']); ?>> Ending Soon Badge</label><br>
+                        <label><input type="checkbox" name="badges[enable_expired_badge]" <?php checked($settings['badges']['enable_expired_badge']); ?>> Expired Badge</label>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h2>Filter Tabs</h2>
+            <table class="form-table">
+                <tr>
+                    <th>Enable Filters</th>
+                    <td>
+                        <label><input type="checkbox" name="filters[enable_filters]" <?php checked($settings['filters']['enable_filters']); ?>> Show filter tabs</label>
+                    </td>
+                </tr>
+                <tr>
+                    <th>Visible Tabs</th>
+                    <td>
+                        <label><input type="checkbox" name="filters[show_all_tab]" <?php checked($settings['filters']['show_all_tab']); ?>> All</label><br>
+                        <label><input type="checkbox" name="filters[show_domains_tab]" <?php checked($settings['filters']['show_domains_tab']); ?>> Domains</label><br>
+                        <label><input type="checkbox" name="filters[show_hosting_tab]" <?php checked($settings['filters']['show_hosting_tab']); ?>> Hosting</label><br>
+                        <label><input type="checkbox" name="filters[show_ssl_tab]" <?php checked($settings['filters']['show_ssl_tab']); ?>> SSL</label><br>
+                        <label><input type="checkbox" name="filters[show_vps_tab]" <?php checked($settings['filters']['show_vps_tab']); ?>> VPS</label><br>
+                        <label><input type="checkbox" name="filters[show_email_tab]" <?php checked($settings['filters']['show_email_tab']); ?>> Email</label><br>
+                        <label><input type="checkbox" name="filters[show_black_friday_tab]" <?php checked($settings['filters']['show_black_friday_tab']); ?>> Black Friday</label><br>
+                        <label><input type="checkbox" name="filters[show_highest_discount_tab]" <?php checked($settings['filters']['show_highest_discount_tab']); ?>> Top Deals</label>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Page Routes -->
+        <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+            <h2>Page Routes</h2>
+            <p class="description">Configure where promo cards link to. Use relative paths (/domains) or full URLs.</p>
+            <table class="form-table">
+                <?php
+                $route_groups = [
+                    'Domains' => [
+                        'domains' => 'Domains',
+                        'domains_ke' => 'Domains (.ke)',
+                        'domains_transfer' => 'Domain Transfers',
+                        'domains_free' => 'Free Domains',
+                        'domains_whois' => 'WHOIS Lookup',
+                    ],
+                    'Hosting' => [
+                        'hosting' => 'Hosting',
+                        'hosting_cpanel' => 'cPanel Hosting',
+                        'hosting_cyberpanel' => 'CyberPanel Hosting',
+                        'hosting_windows' => 'Windows Hosting',
+                        'hosting_reseller' => 'Reseller Hosting',
+                        'hosting_free' => 'Free Hosting',
+                        'hosting_dedicated' => 'Dedicated Servers',
+                        'hosting_email' => 'Email Hosting',
+                    ],
+                    'VPS' => [
+                        'vps' => 'VPS',
+                        'vps_managed' => 'Managed VPS',
+                    ],
+                    'Other Services' => [
+                        'ssl' => 'SSL Certificates',
+                        'ai_builder' => 'AI Website Builder',
+                        'online_store' => 'Online Store',
+                        'seo' => 'Local SEO',
+                    ],
+                    'WHMCS Fallbacks' => [
+                        'whmcs_cart' => 'WHMCS Cart',
+                        'whmcs_store' => 'WHMCS Store',
+                    ],
+                ];
+
+                foreach ($route_groups as $group_title => $routes):
+                ?>
+                    <tr><th colspan="2"><h3><?php echo $group_title; ?></h3></th></tr>
+                    <?php foreach ($routes as $key => $label): ?>
+                    <tr>
+                        <th><?php echo $label; ?></th>
+                        <td><input type="text" name="routes[<?php echo $key; ?>]" value="<?php echo esc_attr($settings['routes'][$key]); ?>" class="regular-text"></td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php endforeach; ?>
+            </table>
+        </div>
+
+        <?php submit_button('Save Settings', 'primary', 'whx_promo_save'); ?>
+    </form>
+    <?php
+}
+
+function whx_promo_render_docs_tab() {
+    ?>
+    <div style="background:#fff;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <h2>Shortcode Usage</h2>
+        <p>Use <code>[whmcs_promos]</code> to display promotional offers.</p>
+
+        <h3>Examples</h3>
+        <table class="widefat">
+            <thead>
+                <tr>
+                    <th>Shortcode</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>[whmcs_promos]</code></td>
+                    <td>Show all active promotions</td>
+                </tr>
+                <tr>
+                    <td><code>[whmcs_promos category="domains"]</code></td>
+                    <td>Show only domain promotions</td>
+                </tr>
+                <tr>
+                    <td><code>[whmcs_promos show_expired="no"]</code></td>
+                    <td>Hide expired promotions</td>
+                </tr>
+                <tr>
+                    <td><code>[whmcs_promos max_items="10"]</code></td>
+                    <td>Limit to 10 promotions</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Promo Metadata (JSON in WHMCS Notes Field)</h3>
+        <p>Add JSON to the WHMCS promo Notes field to control display:</p>
+        <pre style="background:#f5f5f5;padding:15px;border-radius:5px;">{
   "display": true,
   "category": "domains",
   "title": "Save Big on .COM Domains",
@@ -156,233 +361,228 @@ function whx_promo_docs_tab(){
   "url": "/domains"
 }</pre>
 
-	<h3>Available Categories</h3>
-	<p>domains, hosting, ssl, vps, email, reseller, windows</p>
+        <h3>Available Categories</h3>
+        <p>domains, hosting, ssl, vps, email, reseller, windows</p>
 
-	<h3>Requirements</h3>
-	<ul>
-		<li>WHX WHMCS Core plugin must be active and configured</li>
-		<li>Valid WHMCS API credentials in WHMCS Core settings</li>
-		<li>Promotions must have "display": true in notes to appear</li>
-	</ul>
-	<?php
-}
-
-function whx_promo_get_settings(){
-	$defaults = [
-		'enable_filters' => true,
-		'show_pricing' => true,
-		'preferred_cycle' => 'annually',
-		'routes' => [
-			'domains' => '/domains',
-			'hosting' => '/hosting',
-			'ssl' => '/ssl',
-			'vps' => '/vps',
-			'email' => '/email',
-		],
-	];
-
-	$saved = get_option('whx_promo_settings', []);
-	return array_merge($defaults, $saved);
-}
-
-function whx_promo_save_settings($post){
-	$settings = [
-		'enable_filters' => isset($post['enable_filters']),
-		'show_pricing' => isset($post['show_pricing']),
-		'preferred_cycle' => sanitize_text_field($post['preferred_cycle'] ?? 'annually'),
-		'routes' => [],
-	];
-
-	if (isset($post['routes']) && is_array($post['routes'])) {
-		foreach ($post['routes'] as $key => $value) {
-			$settings['routes'][sanitize_key($key)] = sanitize_text_field($value);
-		}
-	}
-
-	update_option('whx_promo_settings', $settings, false);
+        <h3>Requirements</h3>
+        <ul>
+            <li>WHX WHMCS Core plugin must be active</li>
+            <li>Valid WHMCS API credentials configured in WHMCS Core</li>
+            <li>Promotions must have "display": true in notes to appear</li>
+        </ul>
+    </div>
+    <?php
 }
 
 // ============================================================================
-// SHORTCODE
+// SHORTCODE & RENDERING
 // ============================================================================
 
-add_shortcode('whmcs_promos', 'whx_promo_shortcode');
+add_shortcode('whmcs_promos', 'whx_whmcs_promos_shortcode');
 
-function whx_promo_shortcode($atts){
-	if (!function_exists('whx_request')) {
-		return '<div class="notice notice-error"><p>WHX WHMCS Core plugin required.</p></div>';
-	}
+function whx_whmcs_promos_shortcode($atts) {
+    if (!function_exists('whx_request')) {
+        return '<div class="whx-notice whx-notice--error"><p>WHX WHMCS Core plugin required.</p></div>';
+    }
 
-	$atts = shortcode_atts([
-		'category' => '',
-		'show_expired' => 'yes',
-		'max_items' => 50,
-	], $atts);
+    $atts = shortcode_atts([
+        'category' => '',
+        'show_expired' => 'yes',
+        'max_items' => 50,
+    ], $atts);
 
-	$settings = whx_promo_get_settings();
+    $settings = whx_promo_get_settings();
 
-	// Get data from WHMCS Core (handles caching)
-	$promos = whx_request('GetPromotions', []);
-	$products = whx_request('GetProducts', []);
-	$tlds = whx_get_tld_pricing();
+    // Get data from WHMCS Core (handles caching internally)
+    $promos_data = whx_request('GetPromotions', []);
+    $products_data = whx_request('GetProducts', []);
+    $tlds_data = whx_get_tld_pricing();
 
-	if (empty($promos['promotions']['promotion'])) {
-		return '<p>No promotions available.</p>';
-	}
+    if (empty($promos_data['promotions']['promotion'])) {
+        return '<p>No promotions available.</p>';
+    }
 
-	$promo_list = $promos['promotions']['promotion'];
-	if (isset($promo_list['code'])) $promo_list = [$promo_list];
+    $promo_list = $promos_data['promotions']['promotion'];
+    if (isset($promo_list['code'])) $promo_list = [$promo_list];
 
-	// Process products
-	$products_map = [];
-	if (!empty($products['products']['product'])) {
-		$product_list = $products['products']['product'];
-		if (isset($product_list['pid'])) $product_list = [$product_list];
+    // Build product map
+    $products = [];
+    if (!empty($products_data['products']['product'])) {
+        $product_list = $products_data['products']['product'];
+        if (isset($product_list['pid'])) $product_list = [$product_list];
 
-		foreach ($product_list as $p) {
-			$pid = $p['pid'] ?? '';
-			if ($pid) {
-				$products_map[$pid] = [
-					'name' => $p['name'] ?? '',
-					'group' => strtolower($p['groupname'] ?? ''),
-				];
-			}
-		}
-	}
+        foreach ($product_list as $p) {
+            if (!empty($p['pid'])) {
+                $products[$p['pid']] = [
+                    'name' => $p['name'] ?? '',
+                    'group' => strtolower($p['groupname'] ?? ''),
+                ];
+            }
+        }
+    }
 
-	$items = [];
-	$now = current_time('timestamp');
+    // Build TLD map
+    $tlds = [];
+    if (!empty($tlds_data)) {
+        foreach ($tlds_data as $tld => $pricing) {
+            $tlds[ltrim(strtolower($tld), '.')] = $tld;
+        }
+    }
 
-	foreach ($promo_list as $promo) {
-		if (count($items) >= (int)$atts['max_items']) break;
+    $items = [];
+    $now = current_time('timestamp');
 
-		$code = $promo['code'] ?? '';
-		if (!$code) continue;
+    foreach ($promo_list as $promo) {
+        if (count($items) >= (int)$atts['max_items']) break;
 
-		$notes = $promo['notes'] ?? '';
-		$meta = json_decode($notes, true);
-		if (!is_array($meta) || empty($meta['display'])) continue;
+        $code = $promo['code'] ?? '';
+        if (!$code) continue;
 
-		// Check expiry
-		$expiry = $promo['expirationdate'] ?? '';
-		$is_expired = $expiry && $expiry !== '0000-00-00' && strtotime($expiry) < $now;
-		if ($is_expired && $atts['show_expired'] === 'no') continue;
+        $notes = $promo['notes'] ?? '';
+        $meta = json_decode($notes, true);
+        if (!is_array($meta) || empty($meta['display'])) continue;
 
-		// Determine category
-		$category = $meta['category'] ?? '';
-		$applies_to = $promo['appliesto'] ?? '';
+        // Check expiry
+        $expiry = $promo['expirationdate'] ?? '';
+        $is_expired = $expiry && $expiry !== '0000-00-00' && strtotime($expiry) < $now;
+        if ($is_expired && $atts['show_expired'] === 'no') continue;
 
-		if (!$category && $applies_to) {
-			$tokens = explode(',', $applies_to);
-			foreach ($tokens as $token) {
-				$token = trim($token);
-				if (!ctype_digit($token)) {
-					$category = 'domains';
-					break;
-				}
-				if (isset($products_map[$token])) {
-					$group = $products_map[$token]['group'];
-					if (strpos($group, 'hosting') !== false) $category = 'hosting';
-					elseif (strpos($group, 'ssl') !== false) $category = 'ssl';
-					elseif (strpos($group, 'vps') !== false) $category = 'vps';
-					elseif (strpos($group, 'email') !== false) $category = 'email';
-					break;
-				}
-			}
-		}
+        // Determine category
+        $category = $meta['category'] ?? '';
+        $applies_to = $promo['appliesto'] ?? '';
 
-		// Filter by category
-		if ($atts['category'] && $category !== $atts['category']) continue;
+        if (!$category && $applies_to) {
+            $tokens = explode(',', $applies_to);
+            foreach ($tokens as $token) {
+                $token = trim($token);
 
-		$items[] = [
-			'code' => $code,
-			'title' => $meta['title'] ?? 'Special Offer',
-			'description' => $meta['description'] ?? '',
-			'category' => $category ?: 'general',
-			'discount' => $promo['value'] ?? '0',
-			'type' => $promo['type'] ?? 'Percentage',
-			'is_expired' => $is_expired,
-			'url' => $meta['url'] ?? $settings['routes'][$category] ?? '#',
-		];
-	}
+                // Check if it's a TLD
+                $clean_token = ltrim(strtolower($token), '.');
+                // Strip WHMCS "D." prefix
+                if (preg_match('/^d\./i', $clean_token)) {
+                    $clean_token = substr($clean_token, 2);
+                }
 
-	return whx_promo_render($items, $settings);
+                if (isset($tlds[$clean_token])) {
+                    $category = 'domains';
+                    break;
+                }
+
+                // Check if it's a product ID
+                if (ctype_digit($token) && isset($products[$token])) {
+                    $group = $products[$token]['group'];
+                    if (strpos($group, 'hosting') !== false) $category = 'hosting';
+                    elseif (strpos($group, 'ssl') !== false) $category = 'ssl';
+                    elseif (strpos($group, 'vps') !== false) $category = 'vps';
+                    elseif (strpos($group, 'email') !== false) $category = 'email';
+                    break;
+                }
+            }
+        }
+
+        // Filter by category
+        if ($atts['category'] && $category !== $atts['category']) continue;
+
+        $items[] = [
+            'code' => $code,
+            'title' => $meta['title'] ?? 'Special Offer',
+            'description' => $meta['description'] ?? '',
+            'category' => $category ?: 'general',
+            'discount' => $promo['value'] ?? '0',
+            'type' => $promo['type'] ?? 'Percentage',
+            'is_expired' => $is_expired,
+            'url' => $meta['url'] ?? $settings['routes'][$category] ?? '#',
+        ];
+    }
+
+    return whx_promo_render_cards($items, $settings);
 }
 
-function whx_promo_render($items, $settings){
-	ob_start();
-	?>
-	<style>
-	.whx-promo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin:20px 0;}
-	.whx-promo-card{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:20px;transition:transform .2s,box-shadow .2s;}
-	.whx-promo-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,0.12);}
-	.whx-promo-card--expired{opacity:0.6;}
-	.whx-promo-badge{display:inline-block;padding:4px 12px;background:#2563eb;color:#fff;border-radius:4px;font-size:14px;font-weight:600;margin-bottom:12px;}
-	.whx-promo-title{font-size:18px;font-weight:700;margin:8px 0;color:#1e293b;}
-	.whx-promo-desc{font-size:14px;color:#64748b;margin:8px 0;}
-	.whx-promo-btn{display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;margin-top:12px;}
-	.whx-promo-btn:hover{background:#1d4ed8;}
-	.whx-filter-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
-	.whx-filter-tab{padding:8px 16px;background:#f1f5f9;border:none;border-radius:20px;cursor:pointer;font-size:14px;font-weight:500;color:#475569;}
-	.whx-filter-tab--active{background:#2563eb;color:#fff;}
-	</style>
+function whx_promo_render_cards($items, $settings) {
+    ob_start();
+    ?>
+    <style>
+    .whx-promo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin:20px 0;}
+    .whx-promo-card{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:20px;transition:transform .2s,box-shadow .2s;}
+    .whx-promo-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,0.12);}
+    .whx-promo-card--expired{opacity:0.6;}
+    .whx-promo-badge{display:inline-block;padding:4px 12px;background:#2563eb;color:#fff;border-radius:4px;font-size:14px;font-weight:600;margin-bottom:12px;}
+    .whx-promo-title{font-size:18px;font-weight:700;margin:8px 0;color:#1e293b;}
+    .whx-promo-desc{font-size:14px;color:#64748b;margin:8px 0;}
+    .whx-promo-btn{display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;margin-top:12px;}
+    .whx-promo-btn:hover{background:#1d4ed8;}
+    .whx-filter-tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+    .whx-filter-tab{padding:8px 16px;background:#f1f5f9;border:none;border-radius:20px;cursor:pointer;font-size:14px;font-weight:500;color:#475569;}
+    .whx-filter-tab--active{background:#2563eb;color:#fff;}
+    </style>
 
-	<?php if ($settings['enable_filters']): ?>
-	<div class="whx-filter-tabs">
-		<button class="whx-filter-tab whx-filter-tab--active" data-filter="all">All</button>
-		<button class="whx-filter-tab" data-filter="domains">Domains</button>
-		<button class="whx-filter-tab" data-filter="hosting">Hosting</button>
-		<button class="whx-filter-tab" data-filter="ssl">SSL</button>
-		<button class="whx-filter-tab" data-filter="vps">VPS</button>
-		<button class="whx-filter-tab" data-filter="email">Email</button>
-	</div>
-	<?php endif; ?>
+    <?php if ($settings['filters']['enable_filters']): ?>
+    <div class="whx-filter-tabs">
+        <?php if ($settings['filters']['show_all_tab']): ?>
+        <button class="whx-filter-tab whx-filter-tab--active" data-filter="all">All</button>
+        <?php endif; ?>
+        <?php if ($settings['filters']['show_domains_tab']): ?>
+        <button class="whx-filter-tab" data-filter="domains">Domains</button>
+        <?php endif; ?>
+        <?php if ($settings['filters']['show_hosting_tab']): ?>
+        <button class="whx-filter-tab" data-filter="hosting">Hosting</button>
+        <?php endif; ?>
+        <?php if ($settings['filters']['show_ssl_tab']): ?>
+        <button class="whx-filter-tab" data-filter="ssl">SSL</button>
+        <?php endif; ?>
+        <?php if ($settings['filters']['show_vps_tab']): ?>
+        <button class="whx-filter-tab" data-filter="vps">VPS</button>
+        <?php endif; ?>
+        <?php if ($settings['filters']['show_email_tab']): ?>
+        <button class="whx-filter-tab" data-filter="email">Email</button>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 
-	<div class="whx-promo-grid">
-		<?php foreach ($items as $item): ?>
-		<div class="whx-promo-card <?php echo $item['is_expired'] ? 'whx-promo-card--expired' : ''; ?>" data-category="<?php echo esc_attr($item['category']); ?>">
-			<div class="whx-promo-badge">
-				<?php echo $item['type'] === 'Percentage' ? $item['discount'].'% OFF' : esc_html($item['discount']); ?>
-			</div>
-			<h3 class="whx-promo-title"><?php echo esc_html($item['title']); ?></h3>
-			<?php if ($item['description']): ?>
-			<p class="whx-promo-desc"><?php echo esc_html($item['description']); ?></p>
-			<?php endif; ?>
-			<?php if ($item['is_expired']): ?>
-			<span style="color:#dc2626;font-size:12px;font-weight:600;">EXPIRED</span>
-			<?php else: ?>
-			<a href="<?php echo esc_url($item['url']); ?>" class="whx-promo-btn">Get Offer</a>
-			<?php endif; ?>
-		</div>
-		<?php endforeach; ?>
-	</div>
+    <div class="whx-promo-grid">
+        <?php foreach ($items as $item): ?>
+        <div class="whx-promo-card <?php echo $item['is_expired'] ? 'whx-promo-card--expired' : ''; ?>" data-category="<?php echo esc_attr($item['category']); ?>">
+            <div class="whx-promo-badge">
+                <?php echo $item['type'] === 'Percentage' ? $item['discount'].'% OFF' : esc_html($item['discount']); ?>
+            </div>
+            <h3 class="whx-promo-title"><?php echo esc_html($item['title']); ?></h3>
+            <?php if ($item['description']): ?>
+            <p class="whx-promo-desc"><?php echo esc_html($item['description']); ?></p>
+            <?php endif; ?>
+            <?php if ($item['is_expired']): ?>
+            <span style="color:#dc2626;font-size:12px;font-weight:600;">EXPIRED</span>
+            <?php else: ?>
+            <a href="<?php echo esc_url($item['url']); ?>" class="whx-promo-btn">Get Offer</a>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
 
-	<?php if ($settings['enable_filters']): ?>
-	<script>
-	(function(){
-		const tabs = document.querySelectorAll('.whx-filter-tab');
-		const cards = document.querySelectorAll('.whx-promo-card');
+    <?php if ($settings['filters']['enable_filters']): ?>
+    <script>
+    (function(){
+        const tabs = document.querySelectorAll('.whx-filter-tab');
+        const cards = document.querySelectorAll('.whx-promo-card');
 
-		tabs.forEach(tab => {
-			tab.addEventListener('click', function(){
-				const filter = this.dataset.filter;
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function(){
+                const filter = this.dataset.filter;
 
-				tabs.forEach(t => t.classList.remove('whx-filter-tab--active'));
-				this.classList.add('whx-filter-tab--active');
+                tabs.forEach(t => t.classList.remove('whx-filter-tab--active'));
+                this.classList.add('whx-filter-tab--active');
 
-				cards.forEach(card => {
-					if (filter === 'all' || card.dataset.category === filter) {
-						card.style.display = '';
-					} else {
-						card.style.display = 'none';
-					}
-				});
-			});
-		});
-	})();
-	</script>
-	<?php endif; ?>
-	<?php
-	return ob_get_clean();
+                cards.forEach(card => {
+                    if (filter === 'all' || card.dataset.category === filter) {
+                        card.style.display = '';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    })();
+    </script>
+    <?php endif; ?>
+    <?php
+    return ob_get_clean();
 }
