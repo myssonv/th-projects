@@ -329,6 +329,27 @@ function whx_update_opts($o){
   else update_option($n, $encrypted, false);
 }
 
+/**
+ * Direct update bypassing sanitize callback
+ * Used by test handlers to prevent double encryption
+ */
+function whx_update_opts_direct($o){
+  global $wpdb;
+  $n = whx_opt_name();
+  $serialized = maybe_serialize($o);
+
+  $wpdb->update(
+    $wpdb->options,
+    ['option_value' => $serialized],
+    ['option_name' => $n],
+    ['%s'],
+    ['%s']
+  );
+
+  // Clear cache
+  wp_cache_delete($n, 'options');
+}
+
 /* -------- Domain-aware defaults (multi-market) -------- */
 function whx_market_map(){
   return [
@@ -674,18 +695,14 @@ function whx_sanitize($in){
   $out['accesskey']  = isset($in['accesskey']) ? sanitize_text_field(trim($in['accesskey'])) : ($cur_raw['accesskey'] ?? '');
 
   // Handle WHMCS secret (encrypted password field)
+  // NOTE: This callback only processes form submissions (always plaintext)
+  // Test handlers use whx_update_opts_direct() to bypass this callback
   $secret_changed = false;
   if (isset($in['secret']) && trim($in['secret'])!=='') {
-    $secret_value = sanitize_text_field(trim($in['secret']));
-    // Only encrypt if not already encrypted (prevent double encryption from update_option calls)
-    if (!whx_is_encrypted($secret_value)) {
-      $out['secret'] = whx_encrypt($secret_value);
-      $secret_changed = true;
-      whx_audit_log('WHMCS Secret Updated', 'Secret credentials changed');
-    } else {
-      // Already encrypted - keep as is (from programmatic update_option calls)
-      $out['secret'] = $secret_value;
-    }
+    // New plaintext secret from form - encrypt it
+    $out['secret'] = whx_encrypt(sanitize_text_field(trim($in['secret'])));
+    $secret_changed = true;
+    whx_audit_log('WHMCS Secret Updated', 'Secret credentials changed');
   } else {
     // No new secret - keep existing ENCRYPTED value from database
     $out['secret'] = $cur_raw['secret'] ?? '';
@@ -701,16 +718,10 @@ function whx_sanitize($in){
   // Handle Cloudflare API Key (encrypted password field)
   $cf_changed = false;
   if (isset($in['cf_api_key']) && trim($in['cf_api_key'])!=='') {
-    $cf_api_key_value = sanitize_text_field(trim($in['cf_api_key']));
-    // Only encrypt if not already encrypted (prevent double encryption from update_option calls)
-    if (!whx_is_encrypted($cf_api_key_value)) {
-      $out['cf_api_key'] = whx_encrypt($cf_api_key_value);
-      $cf_changed = true;
-      whx_audit_log('Cloudflare API Key Updated', 'Global API Key changed');
-    } else {
-      // Already encrypted - keep as is (from programmatic update_option calls)
-      $out['cf_api_key'] = $cf_api_key_value;
-    }
+    // New plaintext key from form - encrypt it
+    $out['cf_api_key'] = whx_encrypt(sanitize_text_field(trim($in['cf_api_key'])));
+    $cf_changed = true;
+    whx_audit_log('Cloudflare API Key Updated', 'Global API Key changed');
   } else {
     // No new key - keep existing ENCRYPTED value from database
     $out['cf_api_key'] = $cur_raw['cf_api_key'] ?? '';
@@ -718,16 +729,10 @@ function whx_sanitize($in){
 
   // Handle Cloudflare API Token (encrypted password field)
   if (isset($in['cf_api_token']) && trim($in['cf_api_token'])!=='') {
-    $cf_api_token_value = sanitize_text_field(trim($in['cf_api_token']));
-    // Only encrypt if not already encrypted (prevent double encryption from update_option calls)
-    if (!whx_is_encrypted($cf_api_token_value)) {
-      $out['cf_api_token'] = whx_encrypt($cf_api_token_value);
-      $cf_changed = true;
-      whx_audit_log('Cloudflare API Token Updated', 'API Token changed');
-    } else {
-      // Already encrypted - keep as is (from programmatic update_option calls)
-      $out['cf_api_token'] = $cf_api_token_value;
-    }
+    // New plaintext token from form - encrypt it
+    $out['cf_api_token'] = whx_encrypt(sanitize_text_field(trim($in['cf_api_token'])));
+    $cf_changed = true;
+    whx_audit_log('Cloudflare API Token Updated', 'API Token changed');
   } else {
     // No new token - keep existing ENCRYPTED value from database
     $out['cf_api_token'] = $cur_raw['cf_api_token'] ?? '';
@@ -746,16 +751,10 @@ function whx_sanitize($in){
   // Handle Bunny CDN Access Key (encrypted password field)
   $bunny_changed = false;
   if (isset($in['bunny_access_key']) && trim($in['bunny_access_key'])!=='') {
-    $bunny_access_key_value = sanitize_text_field(trim($in['bunny_access_key']));
-    // Only encrypt if not already encrypted (prevent double encryption from update_option calls)
-    if (!whx_is_encrypted($bunny_access_key_value)) {
-      $out['bunny_access_key'] = whx_encrypt($bunny_access_key_value);
-      $bunny_changed = true;
-      whx_audit_log('Bunny CDN Key Updated', 'Access Key changed');
-    } else {
-      // Already encrypted - keep as is (from programmatic update_option calls)
-      $out['bunny_access_key'] = $bunny_access_key_value;
-    }
+    // New plaintext key from form - encrypt it
+    $out['bunny_access_key'] = whx_encrypt(sanitize_text_field(trim($in['bunny_access_key'])));
+    $bunny_changed = true;
+    whx_audit_log('Bunny CDN Key Updated', 'Access Key changed');
   } else {
     // No new key - keep existing ENCRYPTED value from database
     $out['bunny_access_key'] = $cur_raw['bunny_access_key'] ?? '';
@@ -892,11 +891,11 @@ add_action('admin_post_whx_test', function(){
   if ($ok === true) {
     $o_raw['verified_at'] = current_time('timestamp');
     $o_raw['last_error'] = '';
-    update_option(whx_opt_name(), $o_raw, false);
+    whx_update_opts_direct($o_raw); // Direct update bypassing sanitize callback
     wp_safe_redirect(add_query_arg('whx_notice', 'ok', admin_url('admin.php?page=whx-whmcs-core')));
   } else {
     $o_raw['last_error'] = is_string($ok) ? $ok : 'Unknown error';
-    update_option(whx_opt_name(), $o_raw, false);
+    whx_update_opts_direct($o_raw); // Direct update bypassing sanitize callback
     wp_safe_redirect(add_query_arg('whx_notice', 'err', admin_url('admin.php?page=whx-whmcs-core')));
   }
   exit;
@@ -916,11 +915,11 @@ add_action('admin_post_whx_fetch_currencies', function(){
   if (is_array($map) && $map) {
     $o_raw['currencyids'] = wp_json_encode($map);
     $o_raw['last_error'] = '';
-    update_option(whx_opt_name(), $o_raw, false);
+    whx_update_opts_direct($o_raw); // Direct update bypassing sanitize callback
     wp_safe_redirect(add_query_arg('whx_notice', 'cur_ok', admin_url('admin.php?page=whx-whmcs-core')));
   } else {
     $o_raw['last_error'] = is_string($map) ? $map : 'Currencies list was empty';
-    update_option(whx_opt_name(), $o_raw, false);
+    whx_update_opts_direct($o_raw); // Direct update bypassing sanitize callback
     wp_safe_redirect(add_query_arg('whx_notice', 'cur_err', admin_url('admin.php?page=whx-whmcs-core')));
   }
   exit;
@@ -964,12 +963,12 @@ add_action('admin_post_whx_test_cloudflare', function(){
   if ($test === true) {
     $o_raw['cf_verified_at'] = current_time('timestamp');
     $o_raw['cf_last_error'] = '';
-    update_option(whx_opt_name(), $o_raw, false);
+    whx_update_opts_direct($o_raw); // Direct update bypassing sanitize callback
     whx_audit_log('Cloudflare Test Success', 'Cloudflare connection verified');
     wp_safe_redirect(add_query_arg('whx_notice', 'cf_ok', admin_url('admin.php?page=whx-whmcs-core')));
   } else {
     $o_raw['cf_last_error'] = is_string($test) ? $test : 'Unknown error';
-    update_option(whx_opt_name(), $o_raw, false);
+    whx_update_opts_direct($o_raw); // Direct update bypassing sanitize callback
     whx_audit_log('Cloudflare Test Failed', whx_sanitize_error($o_raw['cf_last_error']));
     wp_safe_redirect(add_query_arg('whx_notice', 'cf_err', admin_url('admin.php?page=whx-whmcs-core')));
   }
@@ -997,12 +996,12 @@ add_action('admin_post_whx_test_bunny', function(){
   if ($test === true) {
     $o_raw['bunny_verified_at'] = current_time('timestamp');
     $o_raw['bunny_last_error'] = '';
-    update_option(whx_opt_name(), $o_raw, false);
+    whx_update_opts_direct($o_raw); // Direct update bypassing sanitize callback
     whx_audit_log('Bunny CDN Test Success', 'Bunny CDN connection verified');
     wp_safe_redirect(add_query_arg('whx_notice', 'bunny_ok', admin_url('admin.php?page=whx-whmcs-core')));
   } else {
     $o_raw['bunny_last_error'] = is_string($test) ? $test : 'Unknown error';
-    update_option(whx_opt_name(), $o_raw, false);
+    whx_update_opts_direct($o_raw); // Direct update bypassing sanitize callback
     whx_audit_log('Bunny CDN Test Failed', whx_sanitize_error($o_raw['bunny_last_error']));
     wp_safe_redirect(add_query_arg('whx_notice', 'bunny_err', admin_url('admin.php?page=whx-whmcs-core')));
   }
