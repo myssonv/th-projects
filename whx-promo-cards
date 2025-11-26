@@ -440,10 +440,9 @@ function whx_whmcs_promos_shortcode($atts) {
 
         $notes = $promo['notes'] ?? '';
         $meta = json_decode($notes, true);
-        if (!is_array($meta)) $meta = [];
 
-        // Only skip if explicitly set to false
-        if (isset($meta['display']) && $meta['display'] === false) continue;
+        // Only show promos with display: true in metadata
+        if (!is_array($meta) || empty($meta['display'])) continue;
 
         // Check expiry
         $expiry = $promo['expirationdate'] ?? '';
