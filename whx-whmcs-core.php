@@ -657,7 +657,10 @@ function whx_field_password($args){
 function whx_sanitize($in){
   // Wrap entire function in try-catch to prevent blank screens
   try {
-    $cur = whx_get_opts(); $out = $cur;
+    // Get BOTH decrypted (for logic) and raw (for preservation)
+    $cur_decrypted = whx_get_opts();
+    $cur_raw = get_option(whx_opt_name(), []);
+    $out = is_array($cur_raw) ? $cur_raw : [];
   } catch (Exception $e) {
     error_log('WHX_ERROR: Failed to get options in sanitize: ' . $e->getMessage());
     add_settings_error('whx_group','whx_fatal','Critical error: ' . $e->getMessage(),'error');
@@ -666,80 +669,127 @@ function whx_sanitize($in){
 
   try {
 
-  $out['endpoint']   = isset($in['endpoint']) ? esc_url_raw(trim($in['endpoint'])) : $cur['endpoint'];
-  $out['identifier'] = isset($in['identifier']) ? sanitize_text_field(trim($in['identifier'])) : $cur['identifier'];
-  $out['accesskey']  = isset($in['accesskey']) ? sanitize_text_field(trim($in['accesskey'])) : $cur['accesskey'];
+  $out['endpoint']   = isset($in['endpoint']) ? esc_url_raw(trim($in['endpoint'])) : ($cur_raw['endpoint'] ?? '');
+  $out['identifier'] = isset($in['identifier']) ? sanitize_text_field(trim($in['identifier'])) : ($cur_raw['identifier'] ?? '');
+  $out['accesskey']  = isset($in['accesskey']) ? sanitize_text_field(trim($in['accesskey'])) : ($cur_raw['accesskey'] ?? '');
 
   // Handle WHMCS secret (encrypted password field)
   $secret_changed = false;
   if (isset($in['secret']) && trim($in['secret'])!=='') {
-    $out['secret'] = sanitize_text_field(trim($in['secret']));
+    // New plaintext secret provided - encrypt it
+    $out['secret'] = whx_encrypt(sanitize_text_field(trim($in['secret'])));
     $secret_changed = true;
     whx_audit_log('WHMCS Secret Updated', 'Secret credentials changed');
+  } else {
+    // No new secret - keep existing ENCRYPTED value from database
+    $out['secret'] = $cur_raw['secret'] ?? '';
   }
 
-  $out['timeout']    = isset($in['timeout']) ? max(3,min(60,(int)$in['timeout'])) : $cur['timeout'];
+  $out['timeout']    = isset($in['timeout']) ? max(3,min(60,(int)$in['timeout'])) : ($cur_raw['timeout'] ?? 12);
 
   // Cache settings
   $out['auto_clear_cache'] = isset($in['auto_clear_cache']) ? 1 : 0;
-  $out['cf_zone_id']  = isset($in['cf_zone_id']) ? sanitize_text_field(trim($in['cf_zone_id'])) : $cur['cf_zone_id'];
-  $out['cf_email']    = isset($in['cf_email']) ? sanitize_email(trim($in['cf_email'])) : $cur['cf_email'];
+  $out['cf_zone_id']  = isset($in['cf_zone_id']) ? sanitize_text_field(trim($in['cf_zone_id'])) : ($cur_raw['cf_zone_id'] ?? '');
+  $out['cf_email']    = isset($in['cf_email']) ? sanitize_email(trim($in['cf_email'])) : ($cur_raw['cf_email'] ?? '');
 
   // Handle Cloudflare API Key (encrypted password field)
   $cf_changed = false;
   if (isset($in['cf_api_key']) && trim($in['cf_api_key'])!=='') {
-    $out['cf_api_key'] = sanitize_text_field(trim($in['cf_api_key']));
+    // New plaintext key provided - encrypt it
+    $out['cf_api_key'] = whx_encrypt(sanitize_text_field(trim($in['cf_api_key'])));
     $cf_changed = true;
     whx_audit_log('Cloudflare API Key Updated', 'Global API Key changed');
+  } else {
+    // No new key - keep existing ENCRYPTED value from database
+    $out['cf_api_key'] = $cur_raw['cf_api_key'] ?? '';
   }
 
   // Handle Cloudflare API Token (encrypted password field)
   if (isset($in['cf_api_token']) && trim($in['cf_api_token'])!=='') {
-    $out['cf_api_token'] = sanitize_text_field(trim($in['cf_api_token']));
+    // New plaintext token provided - encrypt it
+    $out['cf_api_token'] = whx_encrypt(sanitize_text_field(trim($in['cf_api_token'])));
     $cf_changed = true;
     whx_audit_log('Cloudflare API Token Updated', 'API Token changed');
+  } else {
+    // No new token - keep existing ENCRYPTED value from database
+    $out['cf_api_token'] = $cur_raw['cf_api_token'] ?? '';
   }
 
   // Clear Cloudflare errors when credentials are changed
   if ($cf_changed) {
     $out['cf_last_error'] = '';
     $out['cf_verified_at'] = 0; // Reset verification status
+  } else {
+    // Preserve existing error state
+    $out['cf_last_error'] = $cur_raw['cf_last_error'] ?? '';
+    $out['cf_verified_at'] = $cur_raw['cf_verified_at'] ?? 0;
   }
 
   // Handle Bunny CDN Access Key (encrypted password field)
   $bunny_changed = false;
   if (isset($in['bunny_access_key']) && trim($in['bunny_access_key'])!=='') {
-    $out['bunny_access_key'] = sanitize_text_field(trim($in['bunny_access_key']));
+    // New plaintext key provided - encrypt it
+    $out['bunny_access_key'] = whx_encrypt(sanitize_text_field(trim($in['bunny_access_key'])));
     $bunny_changed = true;
     whx_audit_log('Bunny CDN Key Updated', 'Access Key changed');
+  } else {
+    // No new key - keep existing ENCRYPTED value from database
+    $out['bunny_access_key'] = $cur_raw['bunny_access_key'] ?? '';
   }
 
-  $out['bunny_zone_id'] = isset($in['bunny_zone_id']) ? sanitize_text_field(trim($in['bunny_zone_id'])) : $cur['bunny_zone_id'];
+  $out['bunny_zone_id'] = isset($in['bunny_zone_id']) ? sanitize_text_field(trim($in['bunny_zone_id'])) : ($cur_raw['bunny_zone_id'] ?? '');
 
   // Clear Bunny errors when credentials are changed
   if ($bunny_changed) {
     $out['bunny_last_error'] = '';
     $out['bunny_verified_at'] = 0; // Reset verification status
+  } else {
+    // Preserve existing error state
+    $out['bunny_last_error'] = $cur_raw['bunny_last_error'] ?? '';
+    $out['bunny_verified_at'] = $cur_raw['bunny_verified_at'] ?? 0;
   }
 
   if (isset($in['currencyids']) && trim($in['currencyids'])!=='') {
     $map = json_decode(trim($in['currencyids']), true);
-    if (!is_array($map) || empty($map)) { add_settings_error('whx_group','whx_json','Currency IDs JSON is invalid.','error'); $out['last_error']='Invalid currency JSON'; return $out; }
+    if (!is_array($map) || empty($map)) {
+      add_settings_error('whx_group','whx_json','Currency IDs JSON is invalid.','error');
+      $out['last_error']='Invalid currency JSON';
+      return $out;
+    }
     $out['currencyids'] = wp_json_encode($map);
+  } else {
+    $out['currencyids'] = $cur_raw['currencyids'] ?? '{"USD":2}';
   }
 
-  if (!$out['endpoint'] || stripos($out['endpoint'],'https://')!==0) { add_settings_error('whx_group','whx_ep','Endpoint must be HTTPS.','error'); $out['last_error']='Invalid endpoint'; return $out; }
+  $endpoint_check = $out['endpoint'] ?? '';
+  if (!empty($endpoint_check) && stripos($endpoint_check,'https://')!==0) {
+    add_settings_error('whx_group','whx_ep','Endpoint must be HTTPS.','error');
+    $out['last_error']='Invalid endpoint';
+    return $out;
+  }
 
-  if ($out['identifier'] && $out['secret']) {
+  // Test WHMCS connection if credentials are present
+  if (!empty($out['identifier']) && !empty($out['secret'])) {
     $cid = (int)reset(json_decode($out['currencyids'], true));
-    $ok  = whx_quick_test($out, $cid);
+    // Decrypt secret for testing only
+    $test_secret = whx_decrypt($out['secret']);
+    $test_cfg = [
+      'endpoint' => $out['endpoint'],
+      'identifier' => $out['identifier'],
+      'secret' => $test_secret,
+      'accesskey' => $out['accesskey'] ?? '',
+      'timeout' => $out['timeout']
+    ];
+    $ok = whx_quick_test($test_cfg, $cid);
+
     if ($ok === true) {
       $out['verified_at']=current_time('timestamp');
       $out['last_error']='';
       add_settings_error('whx_group','whx_ok','Settings saved. Connected to WHMCS.','updated');
+
       $looks_default = (trim($out['currencyids']) === '{"USD":2}');
       if ($secret_changed || $looks_default) {
-        $fetch = whx_fetch_currencies_now($out);
+        $fetch = whx_fetch_currencies_now($test_cfg);
         if (is_array($fetch) && $fetch) {
           $out['currencyids'] = wp_json_encode($fetch);
           add_settings_error('whx_group','whx_cur_auto','Currencies fetched and saved.','updated');
@@ -748,6 +798,7 @@ function whx_sanitize($in){
           add_settings_error('whx_group','whx_cur_err','Connected, but currency fetch failed: '.$fetch,'error');
         }
       }
+
       // Auto-clear cache if enabled
       if ($out['auto_clear_cache']) {
         whx_clear_cache();
@@ -758,15 +809,19 @@ function whx_sanitize($in){
       add_settings_error('whx_group','whx_err','Settings saved, but connection failed: '.$out['last_error'],'error');
     }
   } else {
+    $out['last_error'] = $cur_raw['last_error'] ?? '';
+    $out['verified_at'] = $cur_raw['verified_at'] ?? 0;
     add_settings_error('whx_group','whx_saved','Settings saved. Enter identifier & secret to connect.','updated');
   }
+
+  // Return RAW data (credentials already encrypted above)
   return $out;
 
   } catch (Exception $e) {
     error_log('WHX_ERROR: Exception in sanitize function: ' . $e->getMessage());
     error_log('WHX_ERROR: Stack trace: ' . $e->getTraceAsString());
     add_settings_error('whx_group','whx_exception','Critical error during save: ' . $e->getMessage(),'error');
-    return $cur; // Return current values to avoid data loss
+    return $cur_raw; // Return raw values to avoid data loss
   }
 }
 
