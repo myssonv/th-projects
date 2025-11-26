@@ -1,14 +1,11 @@
 <?php
 /**
- * WHX – WHMCS Core (v2.4 - Security Hardened)
- * - Settings page with badges
- * - Buttons at the TOP (Test + Fetch Currencies + Clear Cache)
- * - Auto-fetch currencies after a successful save
- * - Cached helpers for other snippets
- * - Settings submenu always first + highlighted
- * - Cache clearing for plugins, Cloudflare, Bunny CDN
- * - Encrypted credential storage
- * - Connection validation for all services
+ * WHX – WHMCS Core (v2.6 - Production)
+ * - Settings page with connection status badges
+ * - Test buttons for WHMCS, Cloudflare, and Bunny CDN
+ * - Encrypted credential storage (AES-256-CBC)
+ * - Cache clearing for WordPress plugins, Cloudflare, and Bunny CDN
+ * - Cloudflare API Token authentication (no Global API Key)
  * - Audit logging and rate limiting
  */
 
@@ -21,28 +18,17 @@ if (!defined('ABSPATH')) exit;
  */
 function whx_encrypt($data) {
   if (empty($data)) return '';
-
-  // Check if OpenSSL is available
-  if (!function_exists('openssl_encrypt')) {
-    error_log('WHX_ERROR: OpenSSL is not available - cannot encrypt credentials');
-    return $data; // Fallback to plaintext if OpenSSL unavailable
-  }
+  if (!function_exists('openssl_encrypt')) return $data;
 
   try {
     $key = wp_salt('auth') . wp_salt('secure_auth');
     $iv_length = openssl_cipher_iv_length('aes-256-cbc');
     $iv = openssl_random_pseudo_bytes($iv_length);
     $encrypted = openssl_encrypt($data, 'aes-256-cbc', $key, 0, $iv);
-
-    if ($encrypted === false) {
-      error_log('WHX_ERROR: OpenSSL encryption failed');
-      return $data; // Fallback to plaintext
-    }
-
+    if ($encrypted === false) return $data;
     return base64_encode($iv . $encrypted);
   } catch (Exception $e) {
-    error_log('WHX_ERROR: Encryption exception: ' . $e->getMessage());
-    return $data; // Fallback to plaintext
+    return $data;
   }
 }
 
@@ -51,50 +37,24 @@ function whx_encrypt($data) {
  */
 function whx_decrypt($data) {
   if (empty($data)) return '';
-
-  // Check if OpenSSL is available
-  if (!function_exists('openssl_decrypt')) {
-    error_log('WHX_ERROR: OpenSSL is not available - cannot decrypt credentials');
-    return $data; // Return as-is (might be plaintext)
-  }
-
-  // Check if data is already encrypted (base64 encoded)
-  // Encrypted data will be base64 encoded and longer than typical plaintext
-  if (!whx_is_encrypted($data)) {
-    // Data is plaintext (from old version), return as-is
-    return $data;
-  }
+  if (!function_exists('openssl_decrypt')) return $data;
+  if (!whx_is_encrypted($data)) return $data;
 
   try {
     $key = wp_salt('auth') . wp_salt('secure_auth');
     $decoded = base64_decode($data, true);
-
-    // If base64_decode fails, assume plaintext
-    if ($decoded === false) {
-      return $data;
-    }
+    if ($decoded === false) return $data;
 
     $iv_length = openssl_cipher_iv_length('aes-256-cbc');
-
-    // Check if decoded data is long enough to contain IV
-    if (strlen($decoded) < $iv_length) {
-      return $data; // Return original if too short
-    }
+    if (strlen($decoded) < $iv_length) return $data;
 
     $iv = substr($decoded, 0, $iv_length);
     $encrypted = substr($decoded, $iv_length);
-
     $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
-
-    // If decryption fails, return original data (might be plaintext)
-    if ($decrypted === false) {
-      error_log('WHX_ERROR: Decryption failed for data');
-      return $data;
-    }
+    if ($decrypted === false) return $data;
 
     return $decrypted;
   } catch (Exception $e) {
-    error_log('WHX_ERROR: Decryption exception: ' . $e->getMessage());
     return $data;
   }
 }
@@ -104,39 +64,20 @@ function whx_decrypt($data) {
  */
 function whx_is_encrypted($data) {
   if (empty($data)) return false;
+  if (!function_exists('openssl_cipher_iv_length')) return false;
+  if (!preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $data)) return false;
 
-  // Check if OpenSSL is available first
-  if (!function_exists('openssl_cipher_iv_length')) {
-    return false; // Can't check encryption without OpenSSL
-  }
-
-  // Encrypted data characteristics:
-  // 1. Base64 encoded (only contains valid base64 chars)
-  // 2. Reasonably long (IV + encrypted data)
-  // 3. Can be successfully decoded
-
-  // Check if it looks like base64
-  if (!preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $data)) {
-    return false; // Contains invalid base64 characters
-  }
-
-  // Try to decode
   $decoded = @base64_decode($data, true);
-  if ($decoded === false) {
-    return false;
-  }
+  if ($decoded === false) return false;
 
-  // Check minimum length (IV is 16 bytes for AES-256-CBC)
   try {
     $iv_length = @openssl_cipher_iv_length('aes-256-cbc');
-    if (!$iv_length || strlen($decoded) < $iv_length + 1) {
-      return false;
-    }
+    if (!$iv_length || strlen($decoded) < $iv_length + 1) return false;
   } catch (Exception $e) {
     return false;
   }
 
-  return true; // Looks encrypted
+  return true;
 }
 
 /**
@@ -194,10 +135,7 @@ function whx_defaults(){
     'timeout'     => 12,
     'verified_at' => 0,
     'last_error'  => '',
-    // Cache clearing options
     'cf_zone_id'  => '',
-    'cf_email'    => '',
-    'cf_api_key'  => '',
     'cf_api_token'=> '',
     'cf_verified_at' => 0,
     'cf_last_error' => '',
@@ -213,74 +151,30 @@ function whx_get_opts(){
     $o = @get_option(whx_opt_name(), []);
     $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
 
-    // Auto-migrate plaintext credentials to encrypted (one-time migration)
+    // Auto-migrate plaintext credentials to encrypted
+    $sensitive_fields = ['secret', 'cf_api_token', 'bunny_access_key'];
     $needs_migration = false;
-    $sensitive_fields = ['secret', 'cf_api_key', 'cf_api_token', 'bunny_access_key'];
 
     foreach ($sensitive_fields as $field) {
-      try {
-        if (!empty($opts[$field]) && !whx_is_encrypted($opts[$field])) {
-          $needs_migration = true;
-          break;
-        }
-      } catch (Exception $e) {
-        @error_log('WHX_ERROR: Error checking encryption for ' . $field . ': ' . $e->getMessage());
-        // Continue with other fields
+      if (!empty($opts[$field]) && !whx_is_encrypted($opts[$field])) {
+        $needs_migration = true;
+        break;
       }
     }
 
-    // If plaintext credentials detected, migrate immediately
     if ($needs_migration) {
-      try {
-        whx_migrate_plaintext_credentials();
-        // Re-fetch after migration
-        $o = @get_option(whx_opt_name(), []);
-        $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
-      } catch (Exception $e) {
-        @error_log('WHX_ERROR: Migration failed: ' . $e->getMessage());
-        // Continue with current options
-      }
+      whx_migrate_plaintext_credentials();
+      $o = @get_option(whx_opt_name(), []);
+      $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
     }
 
-    // Decrypt sensitive fields with error handling
-    try {
-      if (!empty($opts['secret'])) {
-        $opts['secret'] = whx_decrypt($opts['secret']);
-      }
-    } catch (Exception $e) {
-      @error_log('WHX_ERROR: Failed to decrypt secret');
-    }
-
-    try {
-      if (!empty($opts['cf_api_key'])) {
-        $opts['cf_api_key'] = whx_decrypt($opts['cf_api_key']);
-      }
-    } catch (Exception $e) {
-      @error_log('WHX_ERROR: Failed to decrypt cf_api_key');
-    }
-
-    try {
-      if (!empty($opts['cf_api_token'])) {
-        $opts['cf_api_token'] = whx_decrypt($opts['cf_api_token']);
-      }
-    } catch (Exception $e) {
-      @error_log('WHX_ERROR: Failed to decrypt cf_api_token');
-    }
-
-    try {
-      if (!empty($opts['bunny_access_key'])) {
-        $opts['bunny_access_key'] = whx_decrypt($opts['bunny_access_key']);
-      }
-    } catch (Exception $e) {
-      @error_log('WHX_ERROR: Failed to decrypt bunny_access_key');
-    }
+    // Decrypt sensitive fields
+    if (!empty($opts['secret'])) $opts['secret'] = whx_decrypt($opts['secret']);
+    if (!empty($opts['cf_api_token'])) $opts['cf_api_token'] = whx_decrypt($opts['cf_api_token']);
+    if (!empty($opts['bunny_access_key'])) $opts['bunny_access_key'] = whx_decrypt($opts['bunny_access_key']);
 
     return $opts;
   } catch (Exception $e) {
-    @error_log('WHX_ERROR: Critical error in whx_get_opts: ' . $e->getMessage());
-    return whx_defaults();
-  } catch (Throwable $e) {
-    @error_log('WHX_ERROR: Fatal error in whx_get_opts: ' . $e->getMessage());
     return whx_defaults();
   }
 }
@@ -291,36 +185,30 @@ function whx_get_opts(){
 function whx_migrate_plaintext_credentials() {
   $n = whx_opt_name();
   $o = get_option($n, []);
-
   if (!is_array($o)) return;
 
+  $sensitive_fields = ['secret', 'cf_api_token', 'bunny_access_key'];
   $migrated = false;
-  $sensitive_fields = ['secret', 'cf_api_key', 'cf_api_token', 'bunny_access_key'];
 
   foreach ($sensitive_fields as $field) {
     if (!empty($o[$field]) && !whx_is_encrypted($o[$field])) {
-      // Encrypt plaintext credential
       $o[$field] = whx_encrypt($o[$field]);
       $migrated = true;
-      error_log("WHX_MIGRATION: Encrypted plaintext credential: {$field}");
     }
   }
 
   if ($migrated) {
     update_option($n, $o, false);
-    whx_audit_log('Credentials Migrated', 'Auto-encrypted plaintext credentials from v2.3');
+    whx_audit_log('Credentials Migrated', 'Auto-encrypted plaintext credentials');
   }
 }
 function whx_update_opts($o){
   $n = whx_opt_name();
-
-  // Encrypt sensitive fields before storage (only if not already encrypted)
   $encrypted = $o;
-  $sensitive_fields = ['secret', 'cf_api_key', 'cf_api_token', 'bunny_access_key'];
+  $sensitive_fields = ['secret', 'cf_api_token', 'bunny_access_key'];
 
   foreach ($sensitive_fields as $field) {
     if (!empty($encrypted[$field]) && !whx_is_encrypted($encrypted[$field])) {
-      // Only encrypt if it's plaintext (not already encrypted)
       $encrypted[$field] = whx_encrypt($encrypted[$field]);
     }
   }
@@ -436,9 +324,7 @@ add_action('admin_init', function(){
 
   // Cloudflare subsection
   add_settings_field('cf_zone_id','Cloudflare Zone ID','whx_field','whx-whmcs-core','whx_cache',['key'=>'cf_zone_id','placeholder'=>'e.g., a1b2c3d4e5f6...']);
-  add_settings_field('cf_api_token','Cloudflare API Token','whx_field_password','whx-whmcs-core','whx_cache',['key'=>'cf_api_token','placeholder'=>'Preferred – API Token with Cache Purge permission']);
-  add_settings_field('cf_email','Cloudflare Email','whx_field','whx-whmcs-core','whx_cache',['key'=>'cf_email','type'=>'email','placeholder'=>'Alternative – use with Global API Key']);
-  add_settings_field('cf_api_key','Cloudflare Global API Key','whx_field_password','whx-whmcs-core','whx_cache',['key'=>'cf_api_key','placeholder'=>'Alternative – use with Email']);
+  add_settings_field('cf_api_token','Cloudflare API Token','whx_field_password','whx-whmcs-core','whx_cache',['key'=>'cf_api_token','placeholder'=>'API Token with Cache Purge permission']);
 
   // Bunny CDN subsection
   add_settings_field('bunny_access_key','Bunny CDN Access Key','whx_field_password','whx-whmcs-core','whx_cache',['key'=>'bunny_access_key','placeholder'=>'Account API Key']);
@@ -504,8 +390,7 @@ function whx_render(){
       echo '<p><strong>Cloudflare connection failed:</strong> '.esc_html($o['cf_last_error']?:'Unknown error').'</p>';
       echo '<p><strong>Troubleshooting:</strong></p><ul style="margin-left:20px;">';
       echo '<li>Verify your Zone ID is correct (found in Cloudflare dashboard → Overview)</li>';
-      echo '<li>If using API Token: Ensure it has "Cache Purge" permission</li>';
-      echo '<li>If using Global API Key: Ensure Email matches your Cloudflare account</li>';
+      echo '<li>Ensure API Token has "Cache Purge" permission</li>';
       echo '<li>Check the diagnostic information below for more details</li>';
       echo '</ul></div>';
     }
@@ -534,12 +419,8 @@ function whx_render(){
 
   // Cloudflare Status
   $cf_status = 'not-configured';
-  $o_raw = get_option(whx_opt_name(), []); // Check raw DB for encrypted credentials
-  $cf_has_token = !empty($o_raw['cf_api_token']);
-  $cf_has_key_auth = !empty($o_raw['cf_email']) && !empty($o_raw['cf_api_key']);
-  $cf_has_auth = $cf_has_token || $cf_has_key_auth;
-
-  if (!empty($o['cf_zone_id']) && $cf_has_auth) {
+  $o_raw = get_option(whx_opt_name(), []);
+  if (!empty($o['cf_zone_id']) && !empty($o_raw['cf_api_token'])) {
     $cf_status = 'not-verified';
     if ($o['cf_verified_at']) $cf_status = 'valid';
     if ($o['cf_last_error']) $cf_status = 'invalid';
@@ -612,23 +493,10 @@ function whx_render(){
 
   // Cloudflare credentials check
   $cf_has_zone = !empty($o['cf_zone_id']) ? '✓ Set' : '✗ Missing';
-  $cf_has_token = !empty($o['cf_api_token']) ? '✓ Set' : '✗ Missing';
-  $cf_has_key = !empty($o['cf_api_key']) ? '✓ Set' : '✗ Missing';
-  $cf_has_email = !empty($o['cf_email']) ? '✓ Set' : '✗ Missing';
+  $cf_has_token = !empty($o_raw['cf_api_token']) ? '✓ Set' : '✗ Missing';
 
   echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare Zone ID:</strong></td><td style="padding:8px;">' . $cf_has_zone . '</td></tr>';
   echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare API Token:</strong></td><td style="padding:8px;">' . $cf_has_token . '</td></tr>';
-  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare API Key:</strong></td><td style="padding:8px;">' . $cf_has_key . '</td></tr>';
-  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare Email:</strong></td><td style="padding:8px;">' . $cf_has_email . '</td></tr>';
-
-  // Show which auth method would be used
-  $cf_auth_method = 'None configured';
-  if (!empty($o['cf_api_token'])) {
-    $cf_auth_method = 'API Token (Preferred)';
-  } elseif (!empty($o['cf_email']) && !empty($o['cf_api_key'])) {
-    $cf_auth_method = 'Email + Global API Key';
-  }
-  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare Auth Method:</strong></td><td style="padding:8px;">' . $cf_auth_method . '</td></tr>';
 
   // Last test attempt info
   if (!empty($o['cf_last_error'])) {
@@ -700,7 +568,6 @@ function whx_sanitize($in){
     $cur_raw = get_option(whx_opt_name(), []);
     $out = is_array($cur_raw) ? $cur_raw : [];
   } catch (Exception $e) {
-    error_log('WHX_ERROR: Failed to get options in sanitize: ' . $e->getMessage());
     add_settings_error('whx_group','whx_fatal','Critical error: ' . $e->getMessage(),'error');
     return whx_defaults();
   }
@@ -739,38 +606,22 @@ function whx_sanitize($in){
 
   // Cache settings
   $out['auto_clear_cache'] = isset($in['auto_clear_cache']) ? 1 : 0;
-  $out['cf_zone_id']  = isset($in['cf_zone_id']) ? sanitize_text_field(trim($in['cf_zone_id'])) : ($cur_raw['cf_zone_id'] ?? '');
-  $out['cf_email']    = isset($in['cf_email']) ? sanitize_email(trim($in['cf_email'])) : ($cur_raw['cf_email'] ?? '');
-
-  // Handle Cloudflare API Key (encrypted password field)
-  $cf_changed = false;
-  if (isset($in['cf_api_key']) && trim($in['cf_api_key'])!=='') {
-    // New plaintext key from form - encrypt it
-    $out['cf_api_key'] = whx_encrypt(sanitize_text_field(trim($in['cf_api_key'])));
-    $cf_changed = true;
-    whx_audit_log('Cloudflare API Key Updated', 'Global API Key changed');
-  } else {
-    // No new key - keep existing ENCRYPTED value from database
-    $out['cf_api_key'] = $cur_raw['cf_api_key'] ?? '';
-  }
+  $out['cf_zone_id'] = isset($in['cf_zone_id']) ? sanitize_text_field(trim($in['cf_zone_id'])) : ($cur_raw['cf_zone_id'] ?? '');
 
   // Handle Cloudflare API Token (encrypted password field)
+  $cf_changed = false;
   if (isset($in['cf_api_token']) && trim($in['cf_api_token'])!=='') {
-    // New plaintext token from form - encrypt it
     $out['cf_api_token'] = whx_encrypt(sanitize_text_field(trim($in['cf_api_token'])));
     $cf_changed = true;
     whx_audit_log('Cloudflare API Token Updated', 'API Token changed');
   } else {
-    // No new token - keep existing ENCRYPTED value from database
     $out['cf_api_token'] = $cur_raw['cf_api_token'] ?? '';
   }
 
-  // Clear Cloudflare errors when credentials are changed
   if ($cf_changed) {
     $out['cf_last_error'] = '';
-    $out['cf_verified_at'] = 0; // Reset verification status
+    $out['cf_verified_at'] = 0;
   } else {
-    // Preserve existing error state
     $out['cf_last_error'] = $cur_raw['cf_last_error'] ?? '';
     $out['cf_verified_at'] = $cur_raw['cf_verified_at'] ?? 0;
   }
@@ -874,8 +725,6 @@ function whx_sanitize($in){
   return $out;
 
   } catch (Exception $e) {
-    error_log('WHX_ERROR: Exception in sanitize function: ' . $e->getMessage());
-    error_log('WHX_ERROR: Stack trace: ' . $e->getTraceAsString());
     add_settings_error('whx_group','whx_exception','Critical error during save: ' . $e->getMessage(),'error');
     return $cur_raw; // Return raw values to avoid data loss
   }
@@ -1049,93 +898,50 @@ add_action('admin_post_whx_test_bunny', function(){
 function whx_test_cloudflare_connection($opts) {
   try {
     $zone_id = $opts['cf_zone_id'] ?? '';
-    $api_token = $opts['cf_api_token'] ?? '';
-    $email = $opts['cf_email'] ?? '';
-    $api_key = $opts['cf_api_key'] ?? '';
-
-    error_log('WHX_DEBUG: Testing Cloudflare connection...');
-    error_log('WHX_DEBUG: Zone ID: ' . ($zone_id ? 'present' : 'missing'));
-    error_log('WHX_DEBUG: API Token: ' . ($api_token ? 'present' : 'missing'));
-    error_log('WHX_DEBUG: Email: ' . ($email ? 'present' : 'missing'));
-    error_log('WHX_DEBUG: API Key: ' . ($api_key ? 'present' : 'missing'));
+    $api_token = trim($opts['cf_api_token'] ?? '');
 
     if (empty($zone_id)) {
       return 'Zone ID is required';
     }
 
-    // Determine authentication method
-    $headers = ['Content-Type' => 'application/json'];
-
-    // Clean and validate token (remove whitespace, check minimum length)
-    $api_token = trim($api_token);
-    $api_key = trim($api_key);
-    $email = trim($email);
-
-    // API Token must be at least 40 characters (Cloudflare tokens are typically 40+ chars)
-    $has_valid_token = !empty($api_token) && strlen($api_token) >= 40;
-    $has_valid_key_auth = !empty($email) && !empty($api_key) && strlen($api_key) >= 37;
-
-    if ($has_valid_token) {
-      // Preferred: API Token
-      $headers['Authorization'] = 'Bearer ' . $api_token;
-      error_log('WHX_DEBUG: Using API Token auth (token length: ' . strlen($api_token) . ')');
-    } elseif ($has_valid_key_auth) {
-      // Alternative: Email + Global API Key
-      $headers['X-Auth-Email'] = $email;
-      $headers['X-Auth-Key'] = $api_key;
-      error_log('WHX_DEBUG: Using Email + API Key auth');
-    } else {
-      $debug_info = 'Token: ' . ($api_token ? 'present but invalid (len=' . strlen($api_token) . ')' : 'missing');
-      $debug_info .= ', Email: ' . ($email ? 'present' : 'missing');
-      $debug_info .= ', API Key: ' . ($api_key ? 'present but invalid (len=' . strlen($api_key) . ')' : 'missing');
-      error_log('WHX_DEBUG: Auth failed - ' . $debug_info);
-      return 'Invalid credentials: API Token must be 40+ characters OR provide Email + API Key (37+ characters)';
+    if (empty($api_token) || strlen($api_token) < 40) {
+      return 'API Token is required (must be 40+ characters)';
     }
 
     // Verify zone access
     $response = wp_remote_get(
       "https://api.cloudflare.com/client/v4/zones/{$zone_id}",
       [
-        'headers' => $headers,
+        'headers' => [
+          'Content-Type' => 'application/json',
+          'Authorization' => 'Bearer ' . $api_token,
+        ],
         'timeout' => 15,
         'sslverify' => true,
       ]
     );
 
     if (is_wp_error($response)) {
-      $error = $response->get_error_message();
-      error_log('WHX_DEBUG: Cloudflare request failed: ' . $error);
-      return whx_sanitize_error($error);
+      return whx_sanitize_error($response->get_error_message());
     }
 
-    $http_code = wp_remote_retrieve_response_code($response);
-    $raw_body = wp_remote_retrieve_body($response);
-    error_log('WHX_DEBUG: Cloudflare HTTP code: ' . $http_code);
-    error_log('WHX_DEBUG: Cloudflare response: ' . substr($raw_body, 0, 500));
-
-    $body = json_decode($raw_body, true);
+    $body = json_decode(wp_remote_retrieve_body($response), true);
 
     if (!is_array($body)) {
-      error_log('WHX_DEBUG: Cloudflare response is not valid JSON');
-      return 'Invalid response from Cloudflare API (not JSON)';
+      return 'Invalid response from Cloudflare API';
     }
 
     if (isset($body['success']) && $body['success']) {
-      error_log('WHX_DEBUG: Cloudflare test successful');
       return true;
     }
 
     if (isset($body['errors'][0]['message'])) {
-      $error_msg = $body['errors'][0]['message'];
-      error_log('WHX_DEBUG: Cloudflare API error: ' . $error_msg);
-      return whx_sanitize_error($error_msg);
+      return whx_sanitize_error($body['errors'][0]['message']);
     }
 
-    error_log('WHX_DEBUG: Cloudflare unexpected response structure');
-    return 'Unable to verify Cloudflare credentials - check Zone ID and API credentials';
+    return 'Unable to verify Cloudflare credentials';
   } catch (Exception $e) {
-    error_log('WHX_ERROR: Exception in Cloudflare test: ' . $e->getMessage());
-    return 'Exception: ' . $e->getMessage();
+    return 'Connection failed';
   }
 }
 
@@ -1255,14 +1061,6 @@ function whx_clear_cache() {
   // CDN caches
   $results = whx_clear_cloudflare_cache($results);
   $results = whx_clear_bunny_cache($results);
-
-  // Log results
-  if (!empty($results['failed'])) {
-    error_log('WHX Cache Clear - Failed to clear: ' . implode(', ', $results['failed']));
-  }
-  if (!empty($results['cleared'])) {
-    error_log('WHX Cache Clear - Successfully cleared: ' . implode(', ', $results['cleared']));
-  }
 
   return $results;
 }
@@ -1398,36 +1196,10 @@ function whx_clear_cloudflare_cache($results) {
   $opts = whx_get_opts();
 
   $zone_id = $opts['cf_zone_id'] ?? '';
-  $api_token = $opts['cf_api_token'] ?? '';
-  $email = $opts['cf_email'] ?? '';
-  $api_key = $opts['cf_api_key'] ?? '';
+  $api_token = trim($opts['cf_api_token'] ?? '');
 
   // Skip if not configured
-  if (empty($zone_id)) {
-    return $results;
-  }
-
-  // Clean and validate credentials
-  $api_token = trim($api_token);
-  $api_key = trim($api_key);
-  $email = trim($email);
-
-  // Determine authentication method
-  $headers = ['Content-Type' => 'application/json'];
-
-  // API Token must be at least 40 characters (Cloudflare tokens are typically 40+ chars)
-  $has_valid_token = !empty($api_token) && strlen($api_token) >= 40;
-  $has_valid_key_auth = !empty($email) && !empty($api_key) && strlen($api_key) >= 37;
-
-  if ($has_valid_token) {
-    // Preferred: API Token
-    $headers['Authorization'] = 'Bearer ' . $api_token;
-  } elseif ($has_valid_key_auth) {
-    // Alternative: Email + Global API Key
-    $headers['X-Auth-Email'] = $email;
-    $headers['X-Auth-Key'] = $api_key;
-  } else {
-    // Invalid or missing credentials - skip silently
+  if (empty($zone_id) || empty($api_token) || strlen($api_token) < 40) {
     return $results;
   }
 
@@ -1435,7 +1207,10 @@ function whx_clear_cloudflare_cache($results) {
   $response = wp_remote_post(
     "https://api.cloudflare.com/client/v4/zones/{$zone_id}/purge_cache",
     [
-      'headers' => $headers,
+      'headers' => [
+        'Content-Type' => 'application/json',
+        'Authorization' => 'Bearer ' . $api_token,
+      ],
       'body'    => wp_json_encode(['purge_everything' => true]),
       'timeout' => 30,
       'sslverify' => true,
@@ -1443,20 +1218,16 @@ function whx_clear_cloudflare_cache($results) {
   );
 
   if (is_wp_error($response)) {
-    $sanitized_error = whx_sanitize_error($response->get_error_message());
-    $results['failed'][] = 'Cloudflare: ' . $sanitized_error;
+    $results['failed'][] = 'Cloudflare: ' . whx_sanitize_error($response->get_error_message());
     $results['success'] = false;
-    error_log('WHX: Cloudflare cache clear failed: ' . $sanitized_error);
   } else {
     $body = json_decode(wp_remote_retrieve_body($response), true);
     if (isset($body['success']) && $body['success']) {
       $results['cleared'][] = 'Cloudflare CDN';
     } else {
       $error_msg = isset($body['errors'][0]['message']) ? $body['errors'][0]['message'] : 'Unknown error';
-      $sanitized_error = whx_sanitize_error($error_msg);
-      $results['failed'][] = 'Cloudflare: ' . $sanitized_error;
+      $results['failed'][] = 'Cloudflare: ' . whx_sanitize_error($error_msg);
       $results['success'] = false;
-      error_log('WHX: Cloudflare cache clear failed: ' . $sanitized_error);
     }
   }
 
@@ -1491,20 +1262,15 @@ function whx_clear_bunny_cache($results) {
   );
 
   if (is_wp_error($response)) {
-    $sanitized_error = whx_sanitize_error($response->get_error_message());
-    $results['failed'][] = 'Bunny CDN: ' . $sanitized_error;
+    $results['failed'][] = 'Bunny CDN: ' . whx_sanitize_error($response->get_error_message());
     $results['success'] = false;
-    error_log('WHX: Bunny CDN cache clear failed: ' . $sanitized_error);
   } else {
     $status_code = wp_remote_retrieve_response_code($response);
     if ($status_code === 200 || $status_code === 204) {
       $results['cleared'][] = 'Bunny CDN';
     } else {
-      $body = wp_remote_retrieve_body($response);
-      $sanitized_error = whx_sanitize_error($body);
       $results['failed'][] = 'Bunny CDN: HTTP ' . $status_code;
       $results['success'] = false;
-      error_log('WHX: Bunny CDN cache clear failed: HTTP ' . $status_code . ' - ' . $sanitized_error);
     }
   }
 
