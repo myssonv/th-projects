@@ -105,6 +105,11 @@ function whx_decrypt($data) {
 function whx_is_encrypted($data) {
   if (empty($data)) return false;
 
+  // Check if OpenSSL is available first
+  if (!function_exists('openssl_cipher_iv_length')) {
+    return false; // Can't check encryption without OpenSSL
+  }
+
   // Encrypted data characteristics:
   // 1. Base64 encoded (only contains valid base64 chars)
   // 2. Reasonably long (IV + encrypted data)
@@ -116,14 +121,18 @@ function whx_is_encrypted($data) {
   }
 
   // Try to decode
-  $decoded = base64_decode($data, true);
+  $decoded = @base64_decode($data, true);
   if ($decoded === false) {
     return false;
   }
 
   // Check minimum length (IV is 16 bytes for AES-256-CBC)
-  $iv_length = openssl_cipher_iv_length('aes-256-cbc');
-  if (strlen($decoded) < $iv_length + 1) {
+  try {
+    $iv_length = @openssl_cipher_iv_length('aes-256-cbc');
+    if (!$iv_length || strlen($decoded) < $iv_length + 1) {
+      return false;
+    }
+  } catch (Exception $e) {
     return false;
   }
 
@@ -200,43 +209,80 @@ function whx_defaults(){
   ];
 }
 function whx_get_opts(){
-  $o = get_option(whx_opt_name(), []);
-  $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
-
-  // Auto-migrate plaintext credentials to encrypted (one-time migration)
-  $needs_migration = false;
-  $sensitive_fields = ['secret', 'cf_api_key', 'cf_api_token', 'bunny_access_key'];
-
-  foreach ($sensitive_fields as $field) {
-    if (!empty($opts[$field]) && !whx_is_encrypted($opts[$field])) {
-      $needs_migration = true;
-      break;
-    }
-  }
-
-  // If plaintext credentials detected, migrate immediately
-  if ($needs_migration) {
-    whx_migrate_plaintext_credentials();
-    // Re-fetch after migration
-    $o = get_option(whx_opt_name(), []);
+  try {
+    $o = @get_option(whx_opt_name(), []);
     $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
-  }
 
-  // Decrypt sensitive fields
-  if (!empty($opts['secret'])) {
-    $opts['secret'] = whx_decrypt($opts['secret']);
-  }
-  if (!empty($opts['cf_api_key'])) {
-    $opts['cf_api_key'] = whx_decrypt($opts['cf_api_key']);
-  }
-  if (!empty($opts['cf_api_token'])) {
-    $opts['cf_api_token'] = whx_decrypt($opts['cf_api_token']);
-  }
-  if (!empty($opts['bunny_access_key'])) {
-    $opts['bunny_access_key'] = whx_decrypt($opts['bunny_access_key']);
-  }
+    // Auto-migrate plaintext credentials to encrypted (one-time migration)
+    $needs_migration = false;
+    $sensitive_fields = ['secret', 'cf_api_key', 'cf_api_token', 'bunny_access_key'];
 
-  return $opts;
+    foreach ($sensitive_fields as $field) {
+      try {
+        if (!empty($opts[$field]) && !whx_is_encrypted($opts[$field])) {
+          $needs_migration = true;
+          break;
+        }
+      } catch (Exception $e) {
+        @error_log('WHX_ERROR: Error checking encryption for ' . $field . ': ' . $e->getMessage());
+        // Continue with other fields
+      }
+    }
+
+    // If plaintext credentials detected, migrate immediately
+    if ($needs_migration) {
+      try {
+        whx_migrate_plaintext_credentials();
+        // Re-fetch after migration
+        $o = @get_option(whx_opt_name(), []);
+        $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
+      } catch (Exception $e) {
+        @error_log('WHX_ERROR: Migration failed: ' . $e->getMessage());
+        // Continue with current options
+      }
+    }
+
+    // Decrypt sensitive fields with error handling
+    try {
+      if (!empty($opts['secret'])) {
+        $opts['secret'] = whx_decrypt($opts['secret']);
+      }
+    } catch (Exception $e) {
+      @error_log('WHX_ERROR: Failed to decrypt secret');
+    }
+
+    try {
+      if (!empty($opts['cf_api_key'])) {
+        $opts['cf_api_key'] = whx_decrypt($opts['cf_api_key']);
+      }
+    } catch (Exception $e) {
+      @error_log('WHX_ERROR: Failed to decrypt cf_api_key');
+    }
+
+    try {
+      if (!empty($opts['cf_api_token'])) {
+        $opts['cf_api_token'] = whx_decrypt($opts['cf_api_token']);
+      }
+    } catch (Exception $e) {
+      @error_log('WHX_ERROR: Failed to decrypt cf_api_token');
+    }
+
+    try {
+      if (!empty($opts['bunny_access_key'])) {
+        $opts['bunny_access_key'] = whx_decrypt($opts['bunny_access_key']);
+      }
+    } catch (Exception $e) {
+      @error_log('WHX_ERROR: Failed to decrypt bunny_access_key');
+    }
+
+    return $opts;
+  } catch (Exception $e) {
+    @error_log('WHX_ERROR: Critical error in whx_get_opts: ' . $e->getMessage());
+    return whx_defaults();
+  } catch (Throwable $e) {
+    @error_log('WHX_ERROR: Fatal error in whx_get_opts: ' . $e->getMessage());
+    return whx_defaults();
+  }
 }
 
 /**
@@ -386,13 +432,41 @@ function whx_cache_section_desc(){
 function whx_render(){
   if (!current_user_can('manage_options')) return;
 
+  // Emergency diagnostic mode - catch ALL errors
+  set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    echo '<div class="wrap"><div class="notice notice-error">';
+    echo '<h2>WHX WHMCS Core - Fatal Error</h2>';
+    echo '<p><strong>Error:</strong> ' . esc_html($errstr) . '</p>';
+    echo '<p><strong>File:</strong> ' . esc_html($errfile) . ' (Line ' . $errline . ')</p>';
+    echo '<p><strong>OpenSSL Available:</strong> ' . (function_exists('openssl_encrypt') ? 'Yes' : 'No') . '</p>';
+    echo '<p><strong>PHP Version:</strong> ' . PHP_VERSION . '</p>';
+    echo '</div></div>';
+    return false; // Don't execute PHP's internal error handler
+  });
+
   // Catch any errors during options load and display them
   try {
     $o = whx_get_opts();
   } catch (Exception $e) {
-    echo '<div class="wrap"><div class="notice notice-error"><p><strong>CRITICAL ERROR loading options:</strong> ' . esc_html($e->getMessage()) . '</p></div></div>';
+    echo '<div class="wrap"><div class="notice notice-error">';
+    echo '<h2>WHX WHMCS Core - Exception</h2>';
+    echo '<p><strong>Message:</strong> ' . esc_html($e->getMessage()) . '</p>';
+    echo '<p><strong>File:</strong> ' . esc_html($e->getFile()) . ' (Line ' . $e->getLine() . ')</p>';
+    echo '<p><strong>Trace:</strong></p><pre>' . esc_html($e->getTraceAsString()) . '</pre>';
+    echo '</div></div>';
+    restore_error_handler();
+    return;
+  } catch (Throwable $e) {
+    echo '<div class="wrap"><div class="notice notice-error">';
+    echo '<h2>WHX WHMCS Core - Fatal Error (Throwable)</h2>';
+    echo '<p><strong>Message:</strong> ' . esc_html($e->getMessage()) . '</p>';
+    echo '<p><strong>File:</strong> ' . esc_html($e->getFile()) . ' (Line ' . $e->getLine() . ')</p>';
+    echo '</div></div>';
+    restore_error_handler();
     return;
   }
+
+  restore_error_handler();
 
   // Notices
   if (!empty($_GET['whx_notice'])) {
