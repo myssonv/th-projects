@@ -33,12 +33,71 @@ function whx_encrypt($data) {
  */
 function whx_decrypt($data) {
   if (empty($data)) return '';
+
+  // Check if data is already encrypted (base64 encoded)
+  // Encrypted data will be base64 encoded and longer than typical plaintext
+  if (!whx_is_encrypted($data)) {
+    // Data is plaintext (from old version), return as-is
+    return $data;
+  }
+
   $key = wp_salt('auth') . wp_salt('secure_auth');
-  $data = base64_decode($data);
+  $decoded = base64_decode($data, true);
+
+  // If base64_decode fails, assume plaintext
+  if ($decoded === false) {
+    return $data;
+  }
+
   $iv_length = openssl_cipher_iv_length('aes-256-cbc');
-  $iv = substr($data, 0, $iv_length);
-  $encrypted = substr($data, $iv_length);
-  return openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
+
+  // Check if decoded data is long enough to contain IV
+  if (strlen($decoded) < $iv_length) {
+    return $data; // Return original if too short
+  }
+
+  $iv = substr($decoded, 0, $iv_length);
+  $encrypted = substr($decoded, $iv_length);
+
+  $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
+
+  // If decryption fails, return original data (might be plaintext)
+  if ($decrypted === false) {
+    return $data;
+  }
+
+  return $decrypted;
+}
+
+/**
+ * Check if data appears to be encrypted
+ */
+function whx_is_encrypted($data) {
+  if (empty($data)) return false;
+
+  // Encrypted data characteristics:
+  // 1. Base64 encoded (only contains valid base64 chars)
+  // 2. Reasonably long (IV + encrypted data)
+  // 3. Can be successfully decoded
+
+  // Check if it looks like base64
+  if (!preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $data)) {
+    return false; // Contains invalid base64 characters
+  }
+
+  // Try to decode
+  $decoded = base64_decode($data, true);
+  if ($decoded === false) {
+    return false;
+  }
+
+  // Check minimum length (IV is 16 bytes for AES-256-CBC)
+  $iv_length = openssl_cipher_iv_length('aes-256-cbc');
+  if (strlen($decoded) < $iv_length + 1) {
+    return false;
+  }
+
+  return true; // Looks encrypted
 }
 
 /**
@@ -114,6 +173,25 @@ function whx_get_opts(){
   $o = get_option(whx_opt_name(), []);
   $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
 
+  // Auto-migrate plaintext credentials to encrypted (one-time migration)
+  $needs_migration = false;
+  $sensitive_fields = ['secret', 'cf_api_key', 'cf_api_token', 'bunny_access_key'];
+
+  foreach ($sensitive_fields as $field) {
+    if (!empty($opts[$field]) && !whx_is_encrypted($opts[$field])) {
+      $needs_migration = true;
+      break;
+    }
+  }
+
+  // If plaintext credentials detected, migrate immediately
+  if ($needs_migration) {
+    whx_migrate_plaintext_credentials();
+    // Re-fetch after migration
+    $o = get_option(whx_opt_name(), []);
+    $opts = is_array($o) ? array_merge(whx_defaults(), $o) : whx_defaults();
+  }
+
   // Decrypt sensitive fields
   if (!empty($opts['secret'])) {
     $opts['secret'] = whx_decrypt($opts['secret']);
@@ -129,6 +207,33 @@ function whx_get_opts(){
   }
 
   return $opts;
+}
+
+/**
+ * One-time migration: Encrypt plaintext credentials from old version
+ */
+function whx_migrate_plaintext_credentials() {
+  $n = whx_opt_name();
+  $o = get_option($n, []);
+
+  if (!is_array($o)) return;
+
+  $migrated = false;
+  $sensitive_fields = ['secret', 'cf_api_key', 'cf_api_token', 'bunny_access_key'];
+
+  foreach ($sensitive_fields as $field) {
+    if (!empty($o[$field]) && !whx_is_encrypted($o[$field])) {
+      // Encrypt plaintext credential
+      $o[$field] = whx_encrypt($o[$field]);
+      $migrated = true;
+      error_log("WHX_MIGRATION: Encrypted plaintext credential: {$field}");
+    }
+  }
+
+  if ($migrated) {
+    update_option($n, $o, false);
+    whx_audit_log('Credentials Migrated', 'Auto-encrypted plaintext credentials from v2.3');
+  }
 }
 function whx_update_opts($o){
   $n = whx_opt_name();
