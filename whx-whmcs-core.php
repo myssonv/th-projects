@@ -385,7 +385,14 @@ function whx_cache_section_desc(){
 /* ---------------- Render Page ---------------- */
 function whx_render(){
   if (!current_user_can('manage_options')) return;
-  $o = whx_get_opts();
+
+  // Catch any errors during options load and display them
+  try {
+    $o = whx_get_opts();
+  } catch (Exception $e) {
+    echo '<div class="wrap"><div class="notice notice-error"><p><strong>CRITICAL ERROR loading options:</strong> ' . esc_html($e->getMessage()) . '</p></div></div>';
+    return;
+  }
 
   // Notices
   if (!empty($_GET['whx_notice'])) {
@@ -397,7 +404,16 @@ function whx_render(){
     if ($code==='cache_ok') echo '<div class="notice notice-success"><p><strong>Cache cleared.</strong> All available caches have been cleared successfully.</p></div>';
     if ($code==='cache_partial') echo '<div class="notice notice-warning"><p><strong>Cache partially cleared.</strong> Some cache services may not have been cleared. Check error log for details.</p></div>';
     if ($code==='cf_ok')   echo '<div class="notice notice-success"><p><strong>Cloudflare connected.</strong> API credentials verified successfully.</p></div>';
-    if ($code==='cf_err')  echo '<div class="notice notice-error"><p><strong>Cloudflare connection failed:</strong> '.esc_html($o['cf_last_error']?:'Unknown error').'</p></div>';
+    if ($code==='cf_err')  {
+      echo '<div class="notice notice-error">';
+      echo '<p><strong>Cloudflare connection failed:</strong> '.esc_html($o['cf_last_error']?:'Unknown error').'</p>';
+      echo '<p><strong>Troubleshooting:</strong></p><ul style="margin-left:20px;">';
+      echo '<li>Verify your Zone ID is correct (found in Cloudflare dashboard → Overview)</li>';
+      echo '<li>If using API Token: Ensure it has "Cache Purge" permission</li>';
+      echo '<li>If using Global API Key: Ensure Email matches your Cloudflare account</li>';
+      echo '<li>Check the diagnostic information below for more details</li>';
+      echo '</ul></div>';
+    }
     if ($code==='bunny_ok')  echo '<div class="notice notice-success"><p><strong>Bunny CDN connected.</strong> API credentials verified successfully.</p></div>';
     if ($code==='bunny_err') echo '<div class="notice notice-error"><p><strong>Bunny CDN connection failed:</strong> '.esc_html($o['bunny_last_error']?:'Unknown error').'</p></div>';
     if ($code==='rate_limit') echo '<div class="notice notice-warning"><p><strong>Rate limit exceeded.</strong> Please wait a moment before trying again.</p></div>';
@@ -486,6 +502,43 @@ function whx_render(){
     echo '<p style="margin-top:12px;color:#dc3232;"><strong>Cloudflare Error:</strong> '.esc_html($o['cf_last_error']).'</p>';
   if ($o['bunny_last_error'])
     echo '<p style="margin-top:12px;color:#dc3232;"><strong>Bunny CDN Error:</strong> '.esc_html($o['bunny_last_error']).'</p>';
+
+  // Debug information panel
+  echo '<div style="margin-top:30px;padding:15px;background:#f0f0f0;border:1px solid #ddd;border-radius:3px;">';
+  echo '<h3 style="margin-top:0;">System Diagnostic Information</h3>';
+  echo '<table style="width:100%;border-collapse:collapse;">';
+  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>OpenSSL Available:</strong></td><td style="padding:8px;">' . (function_exists('openssl_encrypt') ? '✓ Yes' : '✗ No - Encryption disabled!') . '</td></tr>';
+  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>PHP Version:</strong></td><td style="padding:8px;">' . PHP_VERSION . '</td></tr>';
+
+  // Cloudflare credentials check
+  $cf_has_zone = !empty($o['cf_zone_id']) ? '✓ Set' : '✗ Missing';
+  $cf_has_token = !empty($o['cf_api_token']) ? '✓ Set' : '✗ Missing';
+  $cf_has_key = !empty($o['cf_api_key']) ? '✓ Set' : '✗ Missing';
+  $cf_has_email = !empty($o['cf_email']) ? '✓ Set' : '✗ Missing';
+
+  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare Zone ID:</strong></td><td style="padding:8px;">' . $cf_has_zone . '</td></tr>';
+  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare API Token:</strong></td><td style="padding:8px;">' . $cf_has_token . '</td></tr>';
+  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare API Key:</strong></td><td style="padding:8px;">' . $cf_has_key . '</td></tr>';
+  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare Email:</strong></td><td style="padding:8px;">' . $cf_has_email . '</td></tr>';
+
+  // Show which auth method would be used
+  $cf_auth_method = 'None configured';
+  if (!empty($o['cf_api_token'])) {
+    $cf_auth_method = 'API Token (Preferred)';
+  } elseif (!empty($o['cf_email']) && !empty($o['cf_api_key'])) {
+    $cf_auth_method = 'Email + Global API Key';
+  }
+  echo '<tr style="border-bottom:1px solid #ddd;"><td style="padding:8px;"><strong>Cloudflare Auth Method:</strong></td><td style="padding:8px;">' . $cf_auth_method . '</td></tr>';
+
+  // Last test attempt info
+  if (!empty($o['cf_last_error'])) {
+    echo '<tr style="border-bottom:1px solid #ddd;background:#fee;"><td style="padding:8px;"><strong>Last CF Test Error:</strong></td><td style="padding:8px;color:#c00;">' . esc_html($o['cf_last_error']) . '</td></tr>';
+  }
+
+  echo '</table>';
+  echo '<p style="margin-top:15px;"><small><em>If you see errors, share this diagnostic information for support.</em></small></p>';
+  echo '</div>';
+
   echo '</div>';
 }
 
