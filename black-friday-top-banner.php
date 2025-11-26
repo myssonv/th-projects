@@ -1,11 +1,17 @@
 <?php
 /**
- * Black Friday Top Banner - Compact Header Version
+ * Black Friday Top Banner - Compact Header Version with Promo Code
  * Add this via Code Snippets WP Lite Plugin
  * Location: Before Header / Top of Page
  *
  * This is a slim, compact banner that sits at the very top of the page
+ * REQUIRES: promo-codes-config.php to be loaded first
  */
+
+// Load promo codes configuration if not already loaded
+if (!function_exists('whx_get_promo_code')) {
+    require_once __DIR__ . '/promo-codes-config.php';
+}
 
 // ==================== CONFIGURATION ====================
 $top_banner_config = array(
@@ -18,11 +24,23 @@ $top_banner_config = array(
     'link_url' => '#pricing',  // Optional - set to null to disable link
     'height' => '60px',
     'dismiss_button' => true,  // Allow users to close the banner
+    'promo_code_group' => 'default',  // Links to promo-codes-config.php
+    'show_promo_code' => true,
 );
 
 // Don't show if disabled
 if (!$top_banner_config['enabled']) {
     return;
+}
+
+// Get promo code details if configured
+$promo_data = null;
+if (isset($top_banner_config['show_promo_code']) && $top_banner_config['show_promo_code'] && isset($top_banner_config['promo_code_group'])) {
+    $promo_data = whx_get_promo_code($top_banner_config['promo_code_group']);
+    // Override link URL with promo URL if promo code is set
+    if ($promo_data && isset($promo_data['url'])) {
+        $top_banner_config['link_url'] = $promo_data['url'];
+    }
 }
 
 // Check if user dismissed the banner (uses session storage via JS)
@@ -121,6 +139,73 @@ if (!$top_banner_config['enabled']) {
     opacity: 1;
 }
 
+/* Promo Code - Compact Inline Version */
+.bf-top-promo-code {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(10px);
+}
+
+.bf-top-promo-code-label {
+    font-size: 11px;
+    opacity: 0.9;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.bf-top-promo-code-text {
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: all;
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.bf-top-promo-code-text:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.bf-top-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.9);
+    color: <?php echo $top_banner_config['background_color']; ?>;
+    border: none;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bf-top-copy-btn:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.05);
+}
+
+.bf-top-copy-btn--copied {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.bf-top-copy-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
 @media (max-width: 768px) {
     .bf-top-banner {
         height: auto;
@@ -152,6 +237,21 @@ if (!$top_banner_config['enabled']) {
     .bf-top-banner-countdown-unit {
         font-size: 11px;
     }
+
+    .bf-top-promo-code {
+        font-size: 12px;
+        padding: 3px 10px;
+    }
+
+    .bf-top-promo-code-text {
+        font-size: 12px;
+        padding: 2px 6px;
+    }
+
+    .bf-top-copy-btn {
+        font-size: 10px;
+        padding: 3px 8px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -167,6 +267,15 @@ if (!$top_banner_config['enabled']) {
     .bf-top-banner-message {
         font-size: 13px;
     }
+
+    .bf-top-promo-code {
+        font-size: 11px;
+        gap: 6px;
+    }
+
+    .bf-top-promo-code-label {
+        display: none; /* Hide label on very small screens */
+    }
 }
 </style>
 
@@ -179,6 +288,21 @@ if (!$top_banner_config['enabled']) {
             <div class="bf-top-banner-message">
                 <?php echo esc_html($top_banner_config['message']); ?>
             </div>
+
+            <?php if ($promo_data): ?>
+            <div class="bf-top-promo-code">
+                <span class="bf-top-promo-code-label">Code:</span>
+                <span class="bf-top-promo-code-text" id="bf-top-promo-text" onclick="bfTopSelectPromoCode()">
+                    <?php echo esc_html($promo_data['code']); ?>
+                </span>
+                <button class="bf-top-copy-btn" id="bf-top-copy-btn" onclick="bfTopCopyPromoCode()">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    <span id="bf-top-copy-text">Copy</span>
+                </button>
+            </div>
+            <?php endif; ?>
 
             <?php if ($top_banner_config['show_countdown']): ?>
             <div class="bf-top-banner-countdown" id="bf-top-countdown" data-end="<?php echo esc_attr($top_banner_config['countdown_end']); ?>">
@@ -267,4 +391,68 @@ if (!$top_banner_config['enabled']) {
     updateCountdown();
     setInterval(updateCountdown, 1000);
 })();
+
+// Promo Code Functions for Top Banner
+function bfTopSelectPromoCode() {
+    const codeElement = document.getElementById('bf-top-promo-text');
+    if (codeElement) {
+        const range = document.createRange();
+        range.selectNodeContents(codeElement);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+}
+
+function bfTopCopyPromoCode() {
+    const codeElement = document.getElementById('bf-top-promo-text');
+    const copyBtn = document.getElementById('bf-top-copy-btn');
+    const copyText = document.getElementById('bf-top-copy-text');
+
+    if (!codeElement || !copyBtn || !copyText) return;
+
+    const code = codeElement.textContent.trim();
+
+    // Modern clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(function() {
+            showTopCopySuccess(copyBtn, copyText);
+        }).catch(function(err) {
+            // Fallback to old method
+            fallbackTopCopyToClipboard(code, copyBtn, copyText);
+        });
+    } else {
+        // Fallback for older browsers
+        fallbackTopCopyToClipboard(code, copyBtn, copyText);
+    }
+}
+
+function fallbackTopCopyToClipboard(text, copyBtn, copyText) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        document.execCommand('copy');
+        showTopCopySuccess(copyBtn, copyText);
+    } catch (err) {
+        console.error('Failed to copy:', err);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+function showTopCopySuccess(copyBtn, copyText) {
+    copyBtn.classList.add('bf-top-copy-btn--copied');
+    copyText.textContent = '✓';
+
+    setTimeout(function() {
+        copyBtn.classList.remove('bf-top-copy-btn--copied');
+        copyText.textContent = 'Copy';
+    }, 2000);
+}
 </script>

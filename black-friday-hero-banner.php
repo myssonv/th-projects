@@ -1,9 +1,16 @@
 <?php
 /**
- * Black Friday Hero Banner - Dynamic & Configurable
+ * Black Friday Hero Banner - Dynamic & Configurable with Promo Codes
  * Add this via Code Snippets WP Lite Plugin
  * Location: After Header / Before Content
+ *
+ * REQUIRES: promo-codes-config.php to be loaded first
  */
+
+// Load promo codes configuration if not already loaded
+if (!function_exists('whx_get_promo_code')) {
+    require_once __DIR__ . '/promo-codes-config.php';
+}
 
 // ==================== CONFIGURATION ====================
 // Page-specific banner configurations
@@ -26,6 +33,8 @@ $banner_configs = array(
         'accent_color' => '#FF1B6D',
         'show_graphic' => true,
         'countdown_end' => '2025-11-29 23:59:59', // YYYY-MM-DD HH:MM:SS
+        'promo_code_group' => 'hosting', // Links to promo-codes-config.php
+        'show_promo_code' => true,
     ),
     'wordpress' => array(
         'enabled' => true,
@@ -45,6 +54,8 @@ $banner_configs = array(
         'accent_color' => '#00D9A3',
         'show_graphic' => true,
         'countdown_end' => '2025-11-29 23:59:59',
+        'promo_code_group' => 'hosting',
+        'show_promo_code' => true,
     ),
     'cloud' => array(
         'enabled' => true,
@@ -65,6 +76,77 @@ $banner_configs = array(
         'accent_color' => '#FFFFFF',
         'show_graphic' => false,
         'countdown_end' => '2025-11-29 23:59:59',
+        'promo_code_group' => 'whmcs_store',
+        'show_promo_code' => true,
+    ),
+    // VPS Configuration
+    'vps' => array(
+        'enabled' => true,
+        'discount' => '65',
+        'heading' => 'VPS Black Friday Special',
+        'subheading' => 'Save {discount}% on all VPS plans',
+        'price' => '5.99',
+        'bonus' => 'First 3 months',
+        'features' => array(
+            array('icon' => '💾', 'text' => 'Up to 8TB SSD storage'),
+            array('icon' => '🔧', 'text' => 'Full root access'),
+            array('icon' => '⚡', 'text' => 'Instant setup'),
+        ),
+        'cta_text' => 'Choose VPS plan',
+        'cta_url' => '/vps-hosting',
+        'guarantee' => '7-day money-back guarantee',
+        'background_color' => '#1e1e1e',
+        'accent_color' => '#ff6b35',
+        'show_graphic' => true,
+        'countdown_end' => '2025-11-29 23:59:59',
+        'promo_code_group' => 'vps',
+        'show_promo_code' => true,
+    ),
+    // Domains Configuration
+    'domains' => array(
+        'enabled' => true,
+        'discount' => '50',
+        'heading' => 'Domain Name Sale',
+        'subheading' => 'Get your perfect domain with {discount}% off',
+        'price' => '0.99',
+        'bonus' => 'First year only',
+        'features' => array(
+            array('icon' => '🌐', 'text' => '.com, .net, .org & more'),
+            array('icon' => '🔒', 'text' => 'Free WHOIS privacy'),
+            array('icon' => '📧', 'text' => 'Free email forwarding'),
+        ),
+        'cta_text' => 'Search domains',
+        'cta_url' => '/cloud/cart.php?a=add&domain=register',
+        'guarantee' => null,
+        'background_color' => '#2d3748',
+        'accent_color' => '#48bb78',
+        'show_graphic' => true,
+        'countdown_end' => '2025-11-29 23:59:59',
+        'promo_code_group' => 'domains',
+        'show_promo_code' => true,
+    ),
+    // SSL Configuration
+    'ssl' => array(
+        'enabled' => true,
+        'discount' => '50',
+        'heading' => 'Secure Your Site This Black Friday',
+        'subheading' => '{discount}% off SSL certificates',
+        'price' => '9.99',
+        'bonus' => 'First year',
+        'features' => array(
+            array('icon' => '🔒', 'text' => 'Industry-standard encryption'),
+            array('icon' => '✓', 'text' => 'Boost SEO rankings'),
+            array('icon' => '🛡️', 'text' => 'Protect customer data'),
+        ),
+        'cta_text' => 'Get SSL',
+        'cta_url' => '/ssl',
+        'guarantee' => '30-day money-back guarantee',
+        'background_color' => '#1a1625',
+        'accent_color' => '#10b981',
+        'show_graphic' => true,
+        'countdown_end' => '2025-11-29 23:59:59',
+        'promo_code_group' => 'ssl',
+        'show_promo_code' => true,
     ),
 );
 
@@ -126,6 +208,16 @@ if (!$config['enabled']) {
 // Replace placeholders in text
 $heading = isset($config['heading']) ? $config['heading'] : '';
 $subheading = isset($config['subheading']) ? str_replace('{discount}', $config['discount'], $config['subheading']) : '';
+
+// Get promo code details if configured
+$promo_data = null;
+if (isset($config['show_promo_code']) && $config['show_promo_code'] && isset($config['promo_code_group'])) {
+    $promo_data = whx_get_promo_code($config['promo_code_group']);
+    // Override CTA URL with promo URL if promo code is set
+    if ($promo_data && isset($promo_data['url'])) {
+        $config['cta_url'] = $promo_data['url'];
+    }
+}
 
 ?>
 
@@ -330,6 +422,90 @@ $subheading = isset($config['subheading']) ? str_replace('{discount}', $config['
     letter-spacing: 1px;
 }
 
+/* Promo Code Section */
+.bf-promo-code {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.bf-promo-code-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+    font-weight: 600;
+}
+
+.bf-promo-code-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.bf-promo-code-display {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: <?php echo $config['background_color']; ?>;
+    letter-spacing: 1px;
+    user-select: all;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bf-promo-code-display:hover {
+    background: rgba(255, 255, 255, 1);
+    transform: translateY(-1px);
+}
+
+.bf-copy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 20px;
+    background: <?php echo $config['accent_color']; ?>;
+    color: <?php echo $config['background_color']; ?>;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.bf-copy-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.bf-copy-btn:active {
+    transform: translateY(0);
+}
+
+.bf-copy-btn--copied {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.bf-copy-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
 @keyframes pulse {
     0%, 100% {
         transform: scale(1);
@@ -426,6 +602,26 @@ $subheading = isset($config['subheading']) ? str_replace('{discount}', $config['
     .bf-hero-graphic {
         font-size: 80px;
     }
+
+    .bf-promo-code {
+        padding: 12px 16px;
+    }
+
+    .bf-promo-code-wrapper {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .bf-promo-code-display {
+        width: 100%;
+        font-size: 16px;
+        padding: 10px 16px;
+    }
+
+    .bf-copy-btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 </style>
 
@@ -473,6 +669,23 @@ $subheading = isset($config['subheading']) ? str_replace('{discount}', $config['
             </div>
             <?php endif; ?>
 
+            <?php if ($promo_data): ?>
+            <div class="bf-promo-code">
+                <div class="bf-promo-code-label">🎁 Use promo code:</div>
+                <div class="bf-promo-code-wrapper">
+                    <div class="bf-promo-code-display" id="bf-promo-code-text" onclick="bfSelectPromoCode()">
+                        <?php echo esc_html($promo_data['code']); ?>
+                    </div>
+                    <button class="bf-copy-btn" id="bf-copy-promo-btn" onclick="bfCopyPromoCode()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <span id="bf-copy-text">Copy</span>
+                    </button>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <?php if ($config['price']): ?>
             <div class="bf-hero-pricing">
                 <div class="bf-hero-price">
@@ -514,6 +727,7 @@ $subheading = isset($config['subheading']) ? str_replace('{discount}', $config['
 </div>
 
 <script>
+// Countdown Timer
 (function() {
     const countdownTimer = document.getElementById('bf-countdown-timer');
     if (!countdownTimer) return;
@@ -551,4 +765,68 @@ $subheading = isset($config['subheading']) ? str_replace('{discount}', $config['
     updateCountdown();
     setInterval(updateCountdown, 1000);
 })();
+
+// Promo Code Functions
+function bfSelectPromoCode() {
+    const codeElement = document.getElementById('bf-promo-code-text');
+    if (codeElement) {
+        const range = document.createRange();
+        range.selectNodeContents(codeElement);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+}
+
+function bfCopyPromoCode() {
+    const codeElement = document.getElementById('bf-promo-code-text');
+    const copyBtn = document.getElementById('bf-copy-promo-btn');
+    const copyText = document.getElementById('bf-copy-text');
+
+    if (!codeElement || !copyBtn || !copyText) return;
+
+    const code = codeElement.textContent;
+
+    // Modern clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(function() {
+            showCopySuccess(copyBtn, copyText);
+        }).catch(function(err) {
+            // Fallback to old method
+            fallbackCopyToClipboard(code, copyBtn, copyText);
+        });
+    } else {
+        // Fallback for older browsers
+        fallbackCopyToClipboard(code, copyBtn, copyText);
+    }
+}
+
+function fallbackCopyToClipboard(text, copyBtn, copyText) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        document.execCommand('copy');
+        showCopySuccess(copyBtn, copyText);
+    } catch (err) {
+        console.error('Failed to copy:', err);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+function showCopySuccess(copyBtn, copyText) {
+    copyBtn.classList.add('bf-copy-btn--copied');
+    copyText.textContent = 'Copied!';
+
+    setTimeout(function() {
+        copyBtn.classList.remove('bf-copy-btn--copied');
+        copyText.textContent = 'Copy';
+    }, 2000);
+}
 </script>
