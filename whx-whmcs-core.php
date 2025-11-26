@@ -1032,15 +1032,31 @@ function whx_test_cloudflare_connection($opts) {
 
     // Determine authentication method
     $headers = ['Content-Type' => 'application/json'];
-    if (!empty($api_token)) {
+
+    // Clean and validate token (remove whitespace, check minimum length)
+    $api_token = trim($api_token);
+    $api_key = trim($api_key);
+    $email = trim($email);
+
+    // API Token must be at least 40 characters (Cloudflare tokens are typically 40+ chars)
+    $has_valid_token = !empty($api_token) && strlen($api_token) >= 40;
+    $has_valid_key_auth = !empty($email) && !empty($api_key) && strlen($api_key) >= 37;
+
+    if ($has_valid_token) {
+      // Preferred: API Token
       $headers['Authorization'] = 'Bearer ' . $api_token;
-      error_log('WHX_DEBUG: Using API Token auth');
-    } elseif (!empty($email) && !empty($api_key)) {
+      error_log('WHX_DEBUG: Using API Token auth (token length: ' . strlen($api_token) . ')');
+    } elseif ($has_valid_key_auth) {
+      // Alternative: Email + Global API Key
       $headers['X-Auth-Email'] = $email;
       $headers['X-Auth-Key'] = $api_key;
       error_log('WHX_DEBUG: Using Email + API Key auth');
     } else {
-      return 'API Token or (Email + API Key) required';
+      $debug_info = 'Token: ' . ($api_token ? 'present but invalid (len=' . strlen($api_token) . ')' : 'missing');
+      $debug_info .= ', Email: ' . ($email ? 'present' : 'missing');
+      $debug_info .= ', API Key: ' . ($api_key ? 'present but invalid (len=' . strlen($api_key) . ')' : 'missing');
+      error_log('WHX_DEBUG: Auth failed - ' . $debug_info);
+      return 'Invalid credentials: API Token must be 40+ characters OR provide Email + API Key (37+ characters)';
     }
 
     // Verify zone access
@@ -1358,17 +1374,27 @@ function whx_clear_cloudflare_cache($results) {
     return $results;
   }
 
+  // Clean and validate credentials
+  $api_token = trim($api_token);
+  $api_key = trim($api_key);
+  $email = trim($email);
+
   // Determine authentication method
   $headers = ['Content-Type' => 'application/json'];
-  if (!empty($api_token)) {
+
+  // API Token must be at least 40 characters (Cloudflare tokens are typically 40+ chars)
+  $has_valid_token = !empty($api_token) && strlen($api_token) >= 40;
+  $has_valid_key_auth = !empty($email) && !empty($api_key) && strlen($api_key) >= 37;
+
+  if ($has_valid_token) {
     // Preferred: API Token
     $headers['Authorization'] = 'Bearer ' . $api_token;
-  } elseif (!empty($email) && !empty($api_key)) {
+  } elseif ($has_valid_key_auth) {
     // Alternative: Email + Global API Key
     $headers['X-Auth-Email'] = $email;
     $headers['X-Auth-Key'] = $api_key;
   } else {
-    // Not configured
+    // Invalid or missing credentials - skip silently
     return $results;
   }
 
