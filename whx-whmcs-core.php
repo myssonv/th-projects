@@ -854,19 +854,51 @@ add_action('admin_notices', function(){
 function whx_test_url(){ return wp_nonce_url(admin_url('admin-post.php?action=whx_test'), 'whx_test'); }
 add_action('admin_post_whx_test', function(){
   if (!current_user_can('manage_options') || !check_admin_referer('whx_test')) wp_die('Not allowed.');
-  $o = whx_get_opts(); $map=json_decode($o['currencyids'],true); $cid=is_array($map)?(int)reset($map):1;
-  $ok = ($o['identifier'] && $o['secret']) ? whx_quick_test($o,$cid) : 'Missing identifier/secret';
-  if ($ok===true){ $o['verified_at']=current_time('timestamp'); $o['last_error']=''; whx_update_opts($o); wp_safe_redirect(add_query_arg('whx_notice','ok',admin_url('admin.php?page=whx-whmcs-core'))); }
-  else { $o['last_error']=is_string($ok)?$ok:'Unknown error'; whx_update_opts($o); wp_safe_redirect(add_query_arg('whx_notice','err',admin_url('admin.php?page=whx-whmcs-core'))); }
+
+  // Get decrypted for testing
+  $o_decrypted = whx_get_opts();
+  $map = json_decode($o_decrypted['currencyids'], true);
+  $cid = is_array($map) ? (int)reset($map) : 1;
+
+  $ok = ($o_decrypted['identifier'] && $o_decrypted['secret']) ? whx_quick_test($o_decrypted, $cid) : 'Missing identifier/secret';
+
+  // Get raw for updating (keeps credentials encrypted)
+  $o_raw = get_option(whx_opt_name(), []);
+
+  if ($ok === true) {
+    $o_raw['verified_at'] = current_time('timestamp');
+    $o_raw['last_error'] = '';
+    update_option(whx_opt_name(), $o_raw, false);
+    wp_safe_redirect(add_query_arg('whx_notice', 'ok', admin_url('admin.php?page=whx-whmcs-core')));
+  } else {
+    $o_raw['last_error'] = is_string($ok) ? $ok : 'Unknown error';
+    update_option(whx_opt_name(), $o_raw, false);
+    wp_safe_redirect(add_query_arg('whx_notice', 'err', admin_url('admin.php?page=whx-whmcs-core')));
+  }
   exit;
 });
 
 function whx_fetch_currencies_url(){ return wp_nonce_url(admin_url('admin-post.php?action=whx_fetch_currencies'), 'whx_fetch_currencies'); }
 add_action('admin_post_whx_fetch_currencies', function(){
   if (!current_user_can('manage_options') || !check_admin_referer('whx_fetch_currencies')) wp_die('Not allowed.');
-  $o = whx_get_opts(); $map = whx_fetch_currencies_now($o);
-  if (is_array($map) && $map) { $o['currencyids']=wp_json_encode($map); $o['last_error']=''; whx_update_opts($o); wp_safe_redirect(add_query_arg('whx_notice','cur_ok',admin_url('admin.php?page=whx-whmcs-core'))); }
-  else { $o['last_error']= is_string($map)?$map:'Currencies list was empty'; whx_update_opts($o); wp_safe_redirect(add_query_arg('whx_notice','cur_err',admin_url('admin.php?page=whx-whmcs-core'))); }
+
+  // Get decrypted for testing
+  $o_decrypted = whx_get_opts();
+  $map = whx_fetch_currencies_now($o_decrypted);
+
+  // Get raw for updating (keeps credentials encrypted)
+  $o_raw = get_option(whx_opt_name(), []);
+
+  if (is_array($map) && $map) {
+    $o_raw['currencyids'] = wp_json_encode($map);
+    $o_raw['last_error'] = '';
+    update_option(whx_opt_name(), $o_raw, false);
+    wp_safe_redirect(add_query_arg('whx_notice', 'cur_ok', admin_url('admin.php?page=whx-whmcs-core')));
+  } else {
+    $o_raw['last_error'] = is_string($map) ? $map : 'Currencies list was empty';
+    update_option(whx_opt_name(), $o_raw, false);
+    wp_safe_redirect(add_query_arg('whx_notice', 'cur_err', admin_url('admin.php?page=whx-whmcs-core')));
+  }
   exit;
 });
 
@@ -898,19 +930,23 @@ add_action('admin_post_whx_test_cloudflare', function(){
     exit;
   }
 
-  $o = whx_get_opts();
-  $test = whx_test_cloudflare_connection($o);
+  // Get decrypted for testing
+  $o_decrypted = whx_get_opts();
+  $test = whx_test_cloudflare_connection($o_decrypted);
+
+  // Get raw for updating (keeps credentials encrypted)
+  $o_raw = get_option(whx_opt_name(), []);
 
   if ($test === true) {
-    $o['cf_verified_at'] = current_time('timestamp');
-    $o['cf_last_error'] = '';
-    whx_update_opts($o);
+    $o_raw['cf_verified_at'] = current_time('timestamp');
+    $o_raw['cf_last_error'] = '';
+    update_option(whx_opt_name(), $o_raw, false);
     whx_audit_log('Cloudflare Test Success', 'Cloudflare connection verified');
     wp_safe_redirect(add_query_arg('whx_notice', 'cf_ok', admin_url('admin.php?page=whx-whmcs-core')));
   } else {
-    $o['cf_last_error'] = is_string($test) ? $test : 'Unknown error';
-    whx_update_opts($o);
-    whx_audit_log('Cloudflare Test Failed', whx_sanitize_error($o['cf_last_error']));
+    $o_raw['cf_last_error'] = is_string($test) ? $test : 'Unknown error';
+    update_option(whx_opt_name(), $o_raw, false);
+    whx_audit_log('Cloudflare Test Failed', whx_sanitize_error($o_raw['cf_last_error']));
     wp_safe_redirect(add_query_arg('whx_notice', 'cf_err', admin_url('admin.php?page=whx-whmcs-core')));
   }
   exit;
@@ -927,19 +963,23 @@ add_action('admin_post_whx_test_bunny', function(){
     exit;
   }
 
-  $o = whx_get_opts();
-  $test = whx_test_bunny_connection($o);
+  // Get decrypted for testing
+  $o_decrypted = whx_get_opts();
+  $test = whx_test_bunny_connection($o_decrypted);
+
+  // Get raw for updating (keeps credentials encrypted)
+  $o_raw = get_option(whx_opt_name(), []);
 
   if ($test === true) {
-    $o['bunny_verified_at'] = current_time('timestamp');
-    $o['bunny_last_error'] = '';
-    whx_update_opts($o);
+    $o_raw['bunny_verified_at'] = current_time('timestamp');
+    $o_raw['bunny_last_error'] = '';
+    update_option(whx_opt_name(), $o_raw, false);
     whx_audit_log('Bunny CDN Test Success', 'Bunny CDN connection verified');
     wp_safe_redirect(add_query_arg('whx_notice', 'bunny_ok', admin_url('admin.php?page=whx-whmcs-core')));
   } else {
-    $o['bunny_last_error'] = is_string($test) ? $test : 'Unknown error';
-    whx_update_opts($o);
-    whx_audit_log('Bunny CDN Test Failed', whx_sanitize_error($o['bunny_last_error']));
+    $o_raw['bunny_last_error'] = is_string($test) ? $test : 'Unknown error';
+    update_option(whx_opt_name(), $o_raw, false);
+    whx_audit_log('Bunny CDN Test Failed', whx_sanitize_error($o_raw['bunny_last_error']));
     wp_safe_redirect(add_query_arg('whx_notice', 'bunny_err', admin_url('admin.php?page=whx-whmcs-core')));
   }
   exit;
