@@ -21,11 +21,29 @@ if (!defined('ABSPATH')) exit;
  */
 function whx_encrypt($data) {
   if (empty($data)) return '';
-  $key = wp_salt('auth') . wp_salt('secure_auth');
-  $iv_length = openssl_cipher_iv_length('aes-256-cbc');
-  $iv = openssl_random_pseudo_bytes($iv_length);
-  $encrypted = openssl_encrypt($data, 'aes-256-cbc', $key, 0, $iv);
-  return base64_encode($iv . $encrypted);
+
+  // Check if OpenSSL is available
+  if (!function_exists('openssl_encrypt')) {
+    error_log('WHX_ERROR: OpenSSL is not available - cannot encrypt credentials');
+    return $data; // Fallback to plaintext if OpenSSL unavailable
+  }
+
+  try {
+    $key = wp_salt('auth') . wp_salt('secure_auth');
+    $iv_length = openssl_cipher_iv_length('aes-256-cbc');
+    $iv = openssl_random_pseudo_bytes($iv_length);
+    $encrypted = openssl_encrypt($data, 'aes-256-cbc', $key, 0, $iv);
+
+    if ($encrypted === false) {
+      error_log('WHX_ERROR: OpenSSL encryption failed');
+      return $data; // Fallback to plaintext
+    }
+
+    return base64_encode($iv . $encrypted);
+  } catch (Exception $e) {
+    error_log('WHX_ERROR: Encryption exception: ' . $e->getMessage());
+    return $data; // Fallback to plaintext
+  }
 }
 
 /**
@@ -34,6 +52,12 @@ function whx_encrypt($data) {
 function whx_decrypt($data) {
   if (empty($data)) return '';
 
+  // Check if OpenSSL is available
+  if (!function_exists('openssl_decrypt')) {
+    error_log('WHX_ERROR: OpenSSL is not available - cannot decrypt credentials');
+    return $data; // Return as-is (might be plaintext)
+  }
+
   // Check if data is already encrypted (base64 encoded)
   // Encrypted data will be base64 encoded and longer than typical plaintext
   if (!whx_is_encrypted($data)) {
@@ -41,32 +65,38 @@ function whx_decrypt($data) {
     return $data;
   }
 
-  $key = wp_salt('auth') . wp_salt('secure_auth');
-  $decoded = base64_decode($data, true);
+  try {
+    $key = wp_salt('auth') . wp_salt('secure_auth');
+    $decoded = base64_decode($data, true);
 
-  // If base64_decode fails, assume plaintext
-  if ($decoded === false) {
+    // If base64_decode fails, assume plaintext
+    if ($decoded === false) {
+      return $data;
+    }
+
+    $iv_length = openssl_cipher_iv_length('aes-256-cbc');
+
+    // Check if decoded data is long enough to contain IV
+    if (strlen($decoded) < $iv_length) {
+      return $data; // Return original if too short
+    }
+
+    $iv = substr($decoded, 0, $iv_length);
+    $encrypted = substr($decoded, $iv_length);
+
+    $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
+
+    // If decryption fails, return original data (might be plaintext)
+    if ($decrypted === false) {
+      error_log('WHX_ERROR: Decryption failed for data');
+      return $data;
+    }
+
+    return $decrypted;
+  } catch (Exception $e) {
+    error_log('WHX_ERROR: Decryption exception: ' . $e->getMessage());
     return $data;
   }
-
-  $iv_length = openssl_cipher_iv_length('aes-256-cbc');
-
-  // Check if decoded data is long enough to contain IV
-  if (strlen($decoded) < $iv_length) {
-    return $data; // Return original if too short
-  }
-
-  $iv = substr($decoded, 0, $iv_length);
-  $encrypted = substr($decoded, $iv_length);
-
-  $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
-
-  // If decryption fails, return original data (might be plaintext)
-  if ($decrypted === false) {
-    return $data;
-  }
-
-  return $decrypted;
 }
 
 /**
@@ -498,7 +528,16 @@ function whx_field_password($args){
 
 /* -------------- Save + validate + auto-test + auto-fetch -------------- */
 function whx_sanitize($in){
-  $cur = whx_get_opts(); $out = $cur;
+  // Wrap entire function in try-catch to prevent blank screens
+  try {
+    $cur = whx_get_opts(); $out = $cur;
+  } catch (Exception $e) {
+    error_log('WHX_ERROR: Failed to get options in sanitize: ' . $e->getMessage());
+    add_settings_error('whx_group','whx_fatal','Critical error: ' . $e->getMessage(),'error');
+    return whx_defaults();
+  }
+
+  try {
 
   $out['endpoint']   = isset($in['endpoint']) ? esc_url_raw(trim($in['endpoint'])) : $cur['endpoint'];
   $out['identifier'] = isset($in['identifier']) ? sanitize_text_field(trim($in['identifier'])) : $cur['identifier'];
@@ -534,6 +573,12 @@ function whx_sanitize($in){
     whx_audit_log('Cloudflare API Token Updated', 'API Token changed');
   }
 
+  // Clear Cloudflare errors when credentials are changed
+  if ($cf_changed) {
+    $out['cf_last_error'] = '';
+    $out['cf_verified_at'] = 0; // Reset verification status
+  }
+
   // Handle Bunny CDN Access Key (encrypted password field)
   $bunny_changed = false;
   if (isset($in['bunny_access_key']) && trim($in['bunny_access_key'])!=='') {
@@ -543,6 +588,12 @@ function whx_sanitize($in){
   }
 
   $out['bunny_zone_id'] = isset($in['bunny_zone_id']) ? sanitize_text_field(trim($in['bunny_zone_id'])) : $cur['bunny_zone_id'];
+
+  // Clear Bunny errors when credentials are changed
+  if ($bunny_changed) {
+    $out['bunny_last_error'] = '';
+    $out['bunny_verified_at'] = 0; // Reset verification status
+  }
 
   if (isset($in['currencyids']) && trim($in['currencyids'])!=='') {
     $map = json_decode(trim($in['currencyids']), true);
@@ -583,6 +634,13 @@ function whx_sanitize($in){
     add_settings_error('whx_group','whx_saved','Settings saved. Enter identifier & secret to connect.','updated');
   }
   return $out;
+
+  } catch (Exception $e) {
+    error_log('WHX_ERROR: Exception in sanitize function: ' . $e->getMessage());
+    error_log('WHX_ERROR: Stack trace: ' . $e->getTraceAsString());
+    add_settings_error('whx_group','whx_exception','Critical error during save: ' . $e->getMessage(),'error');
+    return $cur; // Return current values to avoid data loss
+  }
 }
 
 /* ---------- Test + Notices ---------- */
@@ -711,51 +769,80 @@ add_action('admin_post_whx_test_bunny', function(){
  * Test Cloudflare API connection
  */
 function whx_test_cloudflare_connection($opts) {
-  $zone_id = $opts['cf_zone_id'] ?? '';
-  $api_token = $opts['cf_api_token'] ?? '';
-  $email = $opts['cf_email'] ?? '';
-  $api_key = $opts['cf_api_key'] ?? '';
+  try {
+    $zone_id = $opts['cf_zone_id'] ?? '';
+    $api_token = $opts['cf_api_token'] ?? '';
+    $email = $opts['cf_email'] ?? '';
+    $api_key = $opts['cf_api_key'] ?? '';
 
-  if (empty($zone_id)) {
-    return 'Zone ID is required';
+    error_log('WHX_DEBUG: Testing Cloudflare connection...');
+    error_log('WHX_DEBUG: Zone ID: ' . ($zone_id ? 'present' : 'missing'));
+    error_log('WHX_DEBUG: API Token: ' . ($api_token ? 'present' : 'missing'));
+    error_log('WHX_DEBUG: Email: ' . ($email ? 'present' : 'missing'));
+    error_log('WHX_DEBUG: API Key: ' . ($api_key ? 'present' : 'missing'));
+
+    if (empty($zone_id)) {
+      return 'Zone ID is required';
+    }
+
+    // Determine authentication method
+    $headers = ['Content-Type' => 'application/json'];
+    if (!empty($api_token)) {
+      $headers['Authorization'] = 'Bearer ' . $api_token;
+      error_log('WHX_DEBUG: Using API Token auth');
+    } elseif (!empty($email) && !empty($api_key)) {
+      $headers['X-Auth-Email'] = $email;
+      $headers['X-Auth-Key'] = $api_key;
+      error_log('WHX_DEBUG: Using Email + API Key auth');
+    } else {
+      return 'API Token or (Email + API Key) required';
+    }
+
+    // Verify zone access
+    $response = wp_remote_get(
+      "https://api.cloudflare.com/client/v4/zones/{$zone_id}",
+      [
+        'headers' => $headers,
+        'timeout' => 15,
+        'sslverify' => true,
+      ]
+    );
+
+    if (is_wp_error($response)) {
+      $error = $response->get_error_message();
+      error_log('WHX_DEBUG: Cloudflare request failed: ' . $error);
+      return whx_sanitize_error($error);
+    }
+
+    $http_code = wp_remote_retrieve_response_code($response);
+    $raw_body = wp_remote_retrieve_body($response);
+    error_log('WHX_DEBUG: Cloudflare HTTP code: ' . $http_code);
+    error_log('WHX_DEBUG: Cloudflare response: ' . substr($raw_body, 0, 500));
+
+    $body = json_decode($raw_body, true);
+
+    if (!is_array($body)) {
+      error_log('WHX_DEBUG: Cloudflare response is not valid JSON');
+      return 'Invalid response from Cloudflare API (not JSON)';
+    }
+
+    if (isset($body['success']) && $body['success']) {
+      error_log('WHX_DEBUG: Cloudflare test successful');
+      return true;
+    }
+
+    if (isset($body['errors'][0]['message'])) {
+      $error_msg = $body['errors'][0]['message'];
+      error_log('WHX_DEBUG: Cloudflare API error: ' . $error_msg);
+      return whx_sanitize_error($error_msg);
+    }
+
+    error_log('WHX_DEBUG: Cloudflare unexpected response structure');
+    return 'Unable to verify Cloudflare credentials - check Zone ID and API credentials';
+  } catch (Exception $e) {
+    error_log('WHX_ERROR: Exception in Cloudflare test: ' . $e->getMessage());
+    return 'Exception: ' . $e->getMessage();
   }
-
-  // Determine authentication method
-  $headers = ['Content-Type' => 'application/json'];
-  if (!empty($api_token)) {
-    $headers['Authorization'] = 'Bearer ' . $api_token;
-  } elseif (!empty($email) && !empty($api_key)) {
-    $headers['X-Auth-Email'] = $email;
-    $headers['X-Auth-Key'] = $api_key;
-  } else {
-    return 'API Token or (Email + API Key) required';
-  }
-
-  // Verify zone access
-  $response = wp_remote_get(
-    "https://api.cloudflare.com/client/v4/zones/{$zone_id}",
-    [
-      'headers' => $headers,
-      'timeout' => 15,
-      'sslverify' => true,
-    ]
-  );
-
-  if (is_wp_error($response)) {
-    return whx_sanitize_error($response->get_error_message());
-  }
-
-  $body = json_decode(wp_remote_retrieve_body($response), true);
-
-  if (isset($body['success']) && $body['success']) {
-    return true;
-  }
-
-  if (isset($body['errors'][0]['message'])) {
-    return whx_sanitize_error($body['errors'][0]['message']);
-  }
-
-  return 'Unable to verify Cloudflare credentials';
 }
 
 /**
