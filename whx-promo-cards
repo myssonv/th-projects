@@ -1,6 +1,6 @@
 /**
- * WHX Promo Cards v10.0.0
- * Displays WHMCS promotions with smart routing and pricing
+ * WHX Promo Cards v9.9.9
+ * Professional promo card display with WHMCS integration
  * Requires: WHX WHMCS Core (handles caching and API calls)
  */
 
