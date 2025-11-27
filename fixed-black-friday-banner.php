@@ -328,7 +328,7 @@ add_action('wp_footer', function(){
     display:flex;
     justify-content:center;
     position:relative;
-    z-index:9999;
+    z-index:999;
     margin:0;
     padding:0;
 }
@@ -338,7 +338,7 @@ add_action('wp_footer', function(){
     max-width:1400px;
     padding:24px 20px;
     box-sizing:border-box;
-    margin-top:90px;
+    margin-top:0;
 }
 
 /* Strip */
@@ -364,9 +364,10 @@ add_action('wp_footer', function(){
     padding:24px 28px;
     border-radius:16px;
     min-width:300px;
-    flex:0 1 72%;
+    flex:1 1 auto;
     box-shadow:0 10px 25px rgba(0,0,0,0.16);
     color:#fff;
+    max-width:75%;
 }
 
 .th-bf__title {
@@ -471,6 +472,10 @@ add_action('wp_footer', function(){
         flex-direction:column;
         padding:18px;
     }
+    .th-bf__left {
+        max-width:100%;
+        width:100%;
+    }
     .th-bf__actions {
         flex-direction:column;
         align-items:flex-start;
@@ -485,6 +490,9 @@ add_action('wp_footer', function(){
 @media(max-width:420px){
     .th-bf {
         padding:14px;
+    }
+    .th-bf__left {
+        padding:18px 20px;
     }
     .th-bf__title {
         font-size:18px;
@@ -565,17 +573,23 @@ add_action('wp_footer', function(){
             nav.parentNode.insertBefore(wrap, nav.nextSibling);
 
             setTimeout(function(){
+                var navStyle = getComputedStyle(nav);
+                var navHt = nav.getBoundingClientRect().height || nav.offsetHeight || 0;
+
+                // If navbar is fixed, add top padding to banner wrapper to account for fixed header
+                if (navStyle.position === 'fixed' || nav.classList.contains('navbar-fixed-top')) {
+                    wrap.style.paddingTop = (navHt + 10) + 'px';
+                    wrap.style.marginTop = '0';
+                } else {
+                    // For non-fixed headers, add small top margin
+                    wrap.style.marginTop = '10px';
+                }
+
+                // Ensure next element has reasonable margin
                 var next = wrap.nextElementSibling;
                 if (next) {
                     var mt = parseFloat(getComputedStyle(next).marginTop) || 0;
-                    if (mt > 12) next.style.marginTop = '12px';
-                }
-                var navStyle = getComputedStyle(nav);
-                var navHt = nav.getBoundingClientRect().height || nav.offsetHeight || 0;
-                if (navStyle.position === 'fixed' || nav.classList.contains('navbar-fixed-top')) {
-                    wrap.style.marginTop = '-' + navHt + 'px';
-                    var strip = wrap.querySelector('.th-bf__strip');
-                    if (strip) strip.style.paddingTop = (20 + Math.min(12, navHt * 0.07)) + 'px';
+                    if (mt > 24) next.style.marginTop = '24px';
                 }
             }, 70);
         } else {
