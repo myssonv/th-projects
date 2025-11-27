@@ -576,10 +576,9 @@ add_action('wp_footer', function(){
                 var navStyle = getComputedStyle(nav);
                 var navHt = nav.getBoundingClientRect().height || nav.offsetHeight || 0;
 
-                // If navbar is fixed, add top padding to banner wrapper to account for fixed header
+                // If navbar is fixed, add top margin to push banner below fixed header
                 if (navStyle.position === 'fixed' || nav.classList.contains('navbar-fixed-top')) {
-                    wrap.style.paddingTop = (navHt + 10) + 'px';
-                    wrap.style.marginTop = '0';
+                    wrap.style.marginTop = navHt + 'px';
                 } else {
                     // For non-fixed headers, add small top margin
                     wrap.style.marginTop = '10px';
