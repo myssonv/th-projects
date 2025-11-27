@@ -1,4 +1,3 @@
-<?php
 if (!defined('ABSPATH')) exit;
 
 /**
@@ -335,7 +334,6 @@ add_action('wp_footer', function(){
 
 .th-bf {
     width:100%;
-    max-width:1400px;
     padding:24px 20px;
     box-sizing:border-box;
     margin-top:0;
@@ -343,8 +341,7 @@ add_action('wp_footer', function(){
 
 /* Strip */
 .th-bf__strip {
-    width:100%;
-    max-width: 1200px;
+    width:70%;
     margin: 0 auto;
     background:#ffffff;
     border-radius:18px;
@@ -367,25 +364,25 @@ add_action('wp_footer', function(){
     flex:1 1 auto;
     box-shadow:0 10px 25px rgba(0,0,0,0.16);
     color:#fff;
-    max-width:75%;
+    max-width:35%;
 }
 
 .th-bf__title {
     font-weight:800;
-    font-size:20px;
+    font-size:29px;
     margin:0;
     color:#ffffff;
 }
 
 .th-bf__sub {
-    font-size:14px;
+    font-size:18px;
     margin-top:6px;
     opacity:0.9;
     color:#f2f2f2;
 }
 
 .th-bf__count {
-    font-size:14px;
+    font-size:17px;
     margin-top:10px;
     color:#ffcf4d;
     font-weight:700;
@@ -576,13 +573,9 @@ add_action('wp_footer', function(){
                 var navStyle = getComputedStyle(nav);
                 var navHt = nav.getBoundingClientRect().height || nav.offsetHeight || 0;
 
-                // If navbar is fixed, add top margin to push banner below fixed header
-                if (navStyle.position === 'fixed' || nav.classList.contains('navbar-fixed-top')) {
-                    wrap.style.marginTop = navHt + 'px';
-                } else {
-                    // For non-fixed headers, add small top margin
-                    wrap.style.marginTop = '10px';
-                }
+                wrap.style.marginTop = '0';
+				wrap.style.paddingTop = '0';
+
 
                 // Ensure next element has reasonable margin
                 var next = wrap.nextElementSibling;
