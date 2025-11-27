@@ -10,6 +10,7 @@ if (!defined('ABSPATH')) exit;
  * - WHMCS safety & client-side rewrite (override promocode always)
  * - Entire banner is clickable (button styled as div to avoid nested clickables)
  * - Banner inserted after #navigation with proper positioning
+ * - Click tracking with analytics dashboard (loads instantly via AJAX)
  */
 
 /* ------------------------
@@ -111,10 +112,20 @@ function th_bf_admin_page(){
         }
     }
 
+    // Get active tab
+    $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'settings';
+
     // build form
     ?>
     <div class="wrap">
         <h1>Black Friday Banner</h1>
+
+        <h2 class="nav-tab-wrapper">
+            <a href="?page=th-bf-banner&tab=settings" class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">Settings</a>
+            <a href="?page=th-bf-banner&tab=stats" class="nav-tab <?php echo $active_tab === 'stats' ? 'nav-tab-active' : ''; ?>">Click Stats</a>
+        </h2>
+
+        <?php if ($active_tab === 'settings'): ?>
         <form method="post" action="options.php">
             <?php settings_fields('th_bf_group'); ?>
             <?php do_settings_sections('th-bf-banner'); ?>
@@ -173,22 +184,142 @@ function th_bf_admin_page(){
             <?php submit_button('Save banner settings'); ?>
         </form>
 
-        <h2>Blog combo defaults</h2>
-        <p style="color:#666;">Configure the combined banner that appears on blog posts (single post pages).</p>
-    </div>
+        <script>
+        (function(){
+            document.getElementById('th-bf-enable-all').addEventListener('click', function(){
+                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
+                checkboxes.forEach(function(cb){ cb.checked = true; });
+            });
+            document.getElementById('th-bf-disable-all').addEventListener('click', function(){
+                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
+                checkboxes.forEach(function(cb){ cb.checked = false; });
+            });
+        })();
+        </script>
 
-    <script>
-    (function(){
-        document.getElementById('th-bf-enable-all').addEventListener('click', function(){
-            var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
-            checkboxes.forEach(function(cb){ cb.checked = true; });
-        });
-        document.getElementById('th-bf-disable-all').addEventListener('click', function(){
-            var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
-            checkboxes.forEach(function(cb){ cb.checked = false; });
-        });
-    })();
-    </script>
+        <?php elseif ($active_tab === 'stats'): ?>
+
+        <div style="margin-top:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 style="margin:0;">Banner Click Analytics</h2>
+                <button type="button" class="button button-secondary" id="th-bf-refresh-stats">
+                    <span class="dashicons dashicons-update" style="vertical-align:middle;"></span> Refresh
+                </button>
+                <button type="button" class="button button-secondary" id="th-bf-reset-stats" style="color:#a00;">
+                    <span class="dashicons dashicons-trash" style="vertical-align:middle;"></span> Reset All Stats
+                </button>
+            </div>
+
+            <div id="th-bf-stats-loader" style="text-align:center; padding:40px;">
+                <span class="spinner is-active" style="float:none; margin:0;"></span>
+                <p>Loading stats...</p>
+            </div>
+
+            <div id="th-bf-stats-container" style="display:none;">
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th style="width:30%;">Product</th>
+                            <th style="width:15%;">Product Key</th>
+                            <th style="width:20%;">Promo Code</th>
+                            <th style="width:15%;">Total Clicks</th>
+                            <th style="width:20%;">Last Click</th>
+                        </tr>
+                    </thead>
+                    <tbody id="th-bf-stats-body">
+                    </tbody>
+                </table>
+
+                <div id="th-bf-stats-empty" style="display:none; padding:40px; text-align:center; color:#666;">
+                    <span class="dashicons dashicons-chart-line" style="font-size:48px; opacity:0.3;"></span>
+                    <p>No click data yet. Clicks will be tracked when users interact with the banner.</p>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        (function(){
+            var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+
+            function loadStats() {
+                document.getElementById('th-bf-stats-loader').style.display = 'block';
+                document.getElementById('th-bf-stats-container').style.display = 'none';
+
+                fetch(ajaxurl + '?action=th_bf_get_stats', {
+                    method: 'POST',
+                    credentials: 'same-origin'
+                })
+                .then(r => r.json())
+                .then(function(response){
+                    document.getElementById('th-bf-stats-loader').style.display = 'none';
+                    document.getElementById('th-bf-stats-container').style.display = 'block';
+
+                    if (response.success && response.data.length > 0) {
+                        renderStats(response.data);
+                        document.getElementById('th-bf-stats-empty').style.display = 'none';
+                        document.querySelector('#th-bf-stats-container table').style.display = 'table';
+                    } else {
+                        document.getElementById('th-bf-stats-empty').style.display = 'block';
+                        document.querySelector('#th-bf-stats-container table').style.display = 'none';
+                    }
+                })
+                .catch(function(err){
+                    document.getElementById('th-bf-stats-loader').style.display = 'none';
+                    alert('Error loading stats: ' + err.message);
+                });
+            }
+
+            function renderStats(data) {
+                var tbody = document.getElementById('th-bf-stats-body');
+                tbody.innerHTML = '';
+
+                data.forEach(function(row){
+                    var tr = document.createElement('tr');
+                    tr.innerHTML =
+                        '<td><strong>' + escapeHtml(row.title || row.key) + '</strong></td>' +
+                        '<td><code>' + escapeHtml(row.key) + '</code></td>' +
+                        '<td>' + (row.promo ? '<code>' + escapeHtml(row.promo) + '</code>' : '<em>No code</em>') + '</td>' +
+                        '<td><strong style="color:#2271b1; font-size:16px;">' + row.clicks + '</strong></td>' +
+                        '<td>' + (row.last_click || 'Never') + '</td>';
+                    tbody.appendChild(tr);
+                });
+            }
+
+            function escapeHtml(s) {
+                var div = document.createElement('div');
+                div.textContent = s;
+                return div.innerHTML;
+            }
+
+            document.getElementById('th-bf-refresh-stats').addEventListener('click', loadStats);
+
+            document.getElementById('th-bf-reset-stats').addEventListener('click', function(){
+                if (!confirm('Are you sure you want to reset all click statistics? This cannot be undone.')) {
+                    return;
+                }
+
+                fetch(ajaxurl, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'action=th_bf_reset_stats',
+                    credentials: 'same-origin'
+                })
+                .then(r => r.json())
+                .then(function(response){
+                    if (response.success) {
+                        alert('Stats reset successfully!');
+                        loadStats();
+                    }
+                });
+            });
+
+            // Load stats on page load
+            loadStats();
+        })();
+        </script>
+
+        <?php endif; ?>
+    </div>
     <?php
 }
 
@@ -217,6 +348,78 @@ function th_bf_sanitize($input) {
         ];
     }
     return $out;
+}
+
+/* ------------------------
+   AJAX: Click tracking
+   ------------------------ */
+
+// Record click
+add_action('wp_ajax_th_bf_track_click', 'th_bf_track_click');
+add_action('wp_ajax_nopriv_th_bf_track_click', 'th_bf_track_click');
+
+function th_bf_track_click() {
+    $group_key = isset($_POST['group_key']) ? sanitize_text_field($_POST['group_key']) : '';
+    $promo = isset($_POST['promo']) ? sanitize_text_field($_POST['promo']) : '';
+
+    if (empty($group_key)) {
+        wp_send_json_error('Invalid group key');
+        return;
+    }
+
+    // Get current stats
+    $stats = get_option('th_bf_click_stats', []);
+
+    if (!isset($stats[$group_key])) {
+        $stats[$group_key] = [
+            'clicks' => 0,
+            'promo' => $promo,
+            'last_click' => ''
+        ];
+    }
+
+    $stats[$group_key]['clicks']++;
+    $stats[$group_key]['promo'] = $promo;
+    $stats[$group_key]['last_click'] = current_time('mysql');
+
+    update_option('th_bf_click_stats', $stats);
+
+    wp_send_json_success(['clicks' => $stats[$group_key]['clicks']]);
+}
+
+// Get stats
+add_action('wp_ajax_th_bf_get_stats', 'th_bf_get_stats');
+
+function th_bf_get_stats() {
+    $stats = get_option('th_bf_click_stats', []);
+    $opts = get_option('th_bf_opts', []);
+
+    $result = [];
+    foreach ($stats as $key => $data) {
+        $group = isset($opts['groups'][$key]) ? $opts['groups'][$key] : [];
+        $result[] = [
+            'key' => $key,
+            'title' => isset($group['title']) ? $group['title'] : $key,
+            'promo' => $data['promo'],
+            'clicks' => $data['clicks'],
+            'last_click' => $data['last_click']
+        ];
+    }
+
+    // Sort by clicks descending
+    usort($result, function($a, $b) {
+        return $b['clicks'] - $a['clicks'];
+    });
+
+    wp_send_json_success($result);
+}
+
+// Reset stats
+add_action('wp_ajax_th_bf_reset_stats', 'th_bf_reset_stats');
+
+function th_bf_reset_stats() {
+    delete_option('th_bf_click_stats');
+    wp_send_json_success('Stats reset');
 }
 
 /* ------------------------
@@ -280,6 +483,7 @@ add_action('wp_footer', function(){
             // output template for blog
             ?>
             <div id="th-bf-template" style="display:none"
+                 data-group_key="<?php echo esc_attr($group_key); ?>"
                  data-title="<?php echo esc_attr($group['title']); ?>"
                  data-sub="<?php echo esc_attr($group['sub']); ?>"
                  data-promo="<?php echo esc_attr($group['promo']); ?>"
@@ -323,6 +527,7 @@ add_action('wp_footer', function(){
     // emit hidden template for JS to build UI
     ?>
     <div id="th-bf-template" style="display:none"
+         data-group_key="<?php echo esc_attr($group_key); ?>"
          data-title="<?php echo esc_attr($title); ?>"
          data-sub="<?php echo esc_attr($subtitle); ?>"
          data-promo="<?php echo esc_attr($promo); ?>"
@@ -551,6 +756,7 @@ add_action('wp_footer', function(){
         var tpl = document.getElementById('th-bf-template');
         if (!tpl) return;
 
+        var groupKey = tpl.dataset.group_key || '';
         var title = tpl.dataset.title || '';
         var sub = tpl.dataset.sub || '';
         var promo = tpl.dataset.promo || '';
@@ -670,6 +876,11 @@ add_action('wp_footer', function(){
                 return;
             }
 
+            // Track click
+            if (groupKey) {
+                trackClick(groupKey, promo);
+            }
+
             if (ctaUrl && ctaUrl.trim() !== '') {
                 var targetUrl = ctaUrl;
                 // WHMCS CTA rewrite: always override promocode if CTA targets /cloud/
@@ -679,6 +890,27 @@ add_action('wp_footer', function(){
                 window.location.href = targetUrl;
             }
         });
+
+        // Track click function
+        function trackClick(key, promoCode) {
+            var ajaxUrl = '<?php echo admin_url('admin-ajax.php'); ?>';
+            var formData = new FormData();
+            formData.append('action', 'th_bf_track_click');
+            formData.append('group_key', key);
+            formData.append('promo', promoCode || '');
+
+            // Use sendBeacon for reliable tracking even if user navigates away
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(ajaxUrl, formData);
+            } else {
+                // Fallback to fetch
+                fetch(ajaxUrl, {
+                    method: 'POST',
+                    body: formData,
+                    keepalive: true
+                }).catch(function(){});
+            }
+        }
 
         // copy handler
         if (copyBtn) {
