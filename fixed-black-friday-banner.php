@@ -2,13 +2,14 @@ if (!defined('ABSPATH')) exit;
 
 /**
  * Final Black Friday Banner - All features
- * - Admin table UI
- * - Per-product enable/disable
+ * - Admin table UI with bulk management (enable/disable all)
+ * - Per-product enable/disable (no defaults, empty placeholders)
  * - Optional promo (blank allowed) -> "No promo code required"
  * - Blog combined banner on single posts (uses same schedule)
  * - Countdown based on admin start/end (datetime-local)
  * - WHMCS safety & client-side rewrite (override promocode always)
- * - Banner inserted after #navigation, .th-bf margin-top: 90px
+ * - Entire banner is clickable (button styled as div to avoid nested clickables)
+ * - Banner inserted after #navigation with proper positioning
  */
 
 /* ------------------------
@@ -22,37 +23,37 @@ function th_bf_default_config() {
         'default_cta' => '/promos',
         'groups' => [
             // Domains
-            'general_domains' => ['show'=>'1','promo'=>'DOMAIN50','title'=>'Black Friday Domain Sale','sub'=>'Register your dream domain with special offers','cta_text'=>'Claim Deal','cta_url'=>'/promos'],
-            'ke_domains' => ['show'=>'1','promo'=>'BF25KEDOMAIN','title'=>'.KE domain offers','sub'=>'Local domains at Black Friday prices','cta_text'=>'Claim Deal','cta_url'=>'/ke-domain'],
-            'domain_transfer' => ['show'=>'1','promo'=>'DOMAINXFER','title'=>'Domain transfer deals','sub'=>'Move your domain and save','cta_text'=>'Claim Deal','cta_url'=>'/domains/transfer/'],
-            'free_domains' => ['show'=>'1','promo'=>'FREEDOMAIN','title'=>'Free domain offers','sub'=>'Get a free domain with selected plans','cta_text'=>'Claim Deal','cta_url'=>'/domains/free/'],
-            'whois' => ['show'=>'1','promo'=>'','title'=>'WHOIS lookup','sub'=>'Find domain ownership & availability','cta_text'=>'Claim Deal','cta_url'=>'/domains/whois/'],
+            'general_domains' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'ke_domains' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'domain_transfer' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'free_domains' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'whois' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
             // TLDs
-            'tld_com' => ['show'=>'1','promo'=>'BF25COM','title'=>'.COM domain deals','sub'=>'.COM domains at Black Friday prices','cta_text'=>'Claim Deal','cta_url'=>'/domains/tlds/com/'],
-            'tld_za' => ['show'=>'1','promo'=>'BF25ZA','title'=>'.ZA domain deals','sub'=>'.ZA domains at Black Friday prices','cta_text'=>'Claim Deal','cta_url'=>'/domains/tlds/za/'],
-            'tld_ng' => ['show'=>'1','promo'=>'BF25NG','title'=>'.NG domain deals','sub'=>'.NG domains at Black Friday prices','cta_text'=>'Claim Deal','cta_url'=>'/domains/tlds/ng/'],
-            'tld_us' => ['show'=>'1','promo'=>'BF25US','title'=>'.US domain deals','sub'=>'.US domains at Black Friday prices','cta_text'=>'Claim Deal','cta_url'=>'/domains/tlds/us/'],
+            'tld_com' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'tld_za' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'tld_ng' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'tld_us' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
             // Hosting
-            'general_hosting' => ['show'=>'1','promo'=>'BF25HOSTING','title'=>'Black Friday Hosting Deals','sub'=>'High performance hosting, now discounted','cta_text'=>'Claim Deal','cta_url'=>'/hosting/'],
-            'cpanel_hosting' => ['show'=>'1','promo'=>'BF25HOSTING','title'=>'cPanel hosting deals','sub'=>'Familiar cPanel hosting at Black Friday prices','cta_text'=>'Claim Deal','cta_url'=>'/hosting/cpanel/'],
-            'cyberpanel_hosting' => ['show'=>'1','promo'=>'BF25HOSTING','title'=>'CyberPanel hosting','sub'=>'Fast open-source control panel hosting','cta_text'=>'Claim Deal','cta_url'=>'/hosting/cyberpanel/'],
-            'windows_hosting' => ['show'=>'1','promo'=>'BF25HOSTING','title'=>'Windows hosting','sub'=>'Windows hosting at a friendly price','cta_text'=>'Claim Deal','cta_url'=>'/hosting/windows/'],
-            'reseller_hosting' => ['show'=>'1','promo'=>'BF25HOSTING','title'=>'Reseller hosting','sub'=>'Start reselling hosting with great margins','cta_text'=>'Claim Deal','cta_url'=>'/hosting/reseller/'],
-            'free_hosting' => ['show'=>'1','promo'=>'','title'=>'Free hosting','sub'=>'Try our free plan during promotions','cta_text'=>'Claim Deal','cta_url'=>'/hosting/free/'],
-            'dedicated_servers' => ['show'=>'1','promo'=>'DED15','title'=>'Dedicated server deals','sub'=>'Powerful dedicated servers on sale','cta_text'=>'Claim Deal','cta_url'=>'/hosting/dedicated-servers/'],
+            'general_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'cpanel_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'cyberpanel_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'windows_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'reseller_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'free_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'dedicated_servers' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
             // Email, VPS, SSL, services
-            'email_hosting' => ['show'=>'1','promo'=>'BF25EMAILS','title'=>'Black Friday Email Hosting','sub'=>'Secure business email at a discounted price','cta_text'=>'Claim Deal','cta_url'=>'/hosting/email/'],
-            'vps_hosting' => ['show'=>'1','promo'=>'BF25VPS','title'=>'Black Friday VPS Deals','sub'=>'Scalable VPS plans at special rates','cta_text'=>'Claim Deal','cta_url'=>'/vps-hosting/'],
-            'managed_vps' => ['show'=>'1','promo'=>'BF25VPS','title'=>'Managed VPS','sub'=>'Let us manage your VPS and save','cta_text'=>'Claim Deal','cta_url'=>'/vps-hosting/managed/'],
-            'ssl' => ['show'=>'1','promo'=>'SSL15','title'=>'SSL Certificate offers','sub'=>'Protect your site this Black Friday','cta_text'=>'Claim Deal','cta_url'=>'/ssl/'],
-            'ai_builder' => ['show'=>'1','promo'=>'AI30','title'=>'AI Website Builder','sub'=>'Build a site fast — limited-time offers','cta_text'=>'Claim Deal','cta_url'=>'/ai-website-builder/'],
-            'online_store' => ['show'=>'1','promo'=>'SHOP20','title'=>'Online store deals','sub'=>'Start selling with a special discount','cta_text'=>'Claim Deal','cta_url'=>'/online-store/'],
-            'local_seo' => ['show'=>'1','promo'=>'LOCAL10','title'=>'Local SEO','sub'=>'Boost local visibility with our offers','cta_text'=>'Claim Deal','cta_url'=>'/local-seo/'],
+            'email_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'vps_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'managed_vps' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'ssl' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'ai_builder' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'online_store' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'local_seo' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
             // WHMCS
-            'whmcs_cart' => ['show'=>'1','promo'=>'BF25DEFAULT','title'=>'Checkout promo','sub'=>'Apply promo in cart','cta_text'=>'Claim Deal','cta_url'=>'/cloud/cart.php?a=view'],
-            'whmcs_store' => ['show'=>'1','promo'=>'BF25DEFAULT','title'=>'Store offers','sub'=>'Visit the store for deal details','cta_text'=>'Claim Deal','cta_url'=>'/cloud/store'],
+            'whmcs_cart' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'whmcs_store' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
             // Blog combo
-            'blog_combo' => ['show'=>'1','promo'=>'','title'=>'Hosting + Domain Combo Deals','sub'=>'Exclusive Black Friday savings on hosting and domains','cta_text'=>'See Deals','cta_url'=>'/promos']
+            'blog_combo' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>'']
         ]
     ];
 }
@@ -130,6 +131,11 @@ function th_bf_admin_page(){
             <h2>Per-product settings</h2>
             <p style="color:#666;">Use the Show checkbox to hide the banner on a product. Leave promo empty to allow "No promo code required".</p>
 
+            <div style="margin-bottom:12px;">
+                <button type="button" class="button" id="th-bf-enable-all">Enable All</button>
+                <button type="button" class="button" id="th-bf-disable-all">Disable All</button>
+            </div>
+
             <table class="widefat" style="max-width:1200px;">
                 <thead><tr>
                     <th style="width:40px;">Show</th>
@@ -170,6 +176,19 @@ function th_bf_admin_page(){
         <h2>Blog combo defaults</h2>
         <p style="color:#666;">Configure the combined banner that appears on blog posts (single post pages).</p>
     </div>
+
+    <script>
+    (function(){
+        document.getElementById('th-bf-enable-all').addEventListener('click', function(){
+            var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
+            checkboxes.forEach(function(cb){ cb.checked = true; });
+        });
+        document.getElementById('th-bf-disable-all').addEventListener('click', function(){
+            var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
+            checkboxes.forEach(function(cb){ cb.checked = false; });
+        });
+    })();
+    </script>
     <?php
 }
 
@@ -353,6 +372,13 @@ add_action('wp_footer', function(){
     box-shadow:0 20px 48px rgba(12,20,40,0.08);
     border:1px solid rgba(0,0,0,0.04);
     box-sizing:border-box;
+    cursor:pointer;
+    transition:transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.th-bf__strip:hover {
+    transform:translateY(-2px);
+    box-shadow:0 24px 56px rgba(12,20,40,0.12);
 }
 
 /* LEFT CARD */
@@ -408,6 +434,9 @@ add_action('wp_footer', function(){
     text-decoration:none;
     font-size:15px;
     box-shadow:0 10px 30px rgba(255,10,120,0.18);
+    display:inline-block;
+    cursor:pointer;
+    user-select:none;
 }
 
 /* Promo box */
@@ -542,16 +571,16 @@ add_action('wp_footer', function(){
         var inner = document.createElement('div');
         inner.className = 'th-bf';
 
-        var stripHTML = '<div class="th-bf__strip" role="region" aria-label="Black Friday banner">' +
+        var stripHTML = '<div class="th-bf__strip" role="region" aria-label="Black Friday banner" style="cursor:pointer;">' +
             '<div class="th-bf__left">' +
                 '<div class="th-bf__title">' + escapeHtml(title) + '</div>' +
                 '<div class="th-bf__sub">' + escapeHtml(sub) + '</div>' +
                 '<div class="th-bf__count" aria-live="polite" id="th-bf-count"></div>' +
             '</div>' +
             '<div class="th-bf__actions">' +
-                '<a class="th-bf__cta" id="th-bf-cta" href="' + escapeAttr(ctaUrl) + '">' +
+                '<div class="th-bf__cta" id="th-bf-cta">' +
                     escapeHtml(ctaText) +
-                '</a>' +
+                '</div>' +
                 '<div class="th-bf__promo" id="th-bf-promo">' +
                     '<span class="th-bf__promo-text" id="th-bf-promo-text"></span>' +
                     '<span class="th-bf__copy" id="th-bf-copy" role="button" aria-label="Copy promo code" title="Copy promo code" style="display:none;">' +
@@ -634,10 +663,28 @@ add_action('wp_footer', function(){
         update();
         var iv = endTs ? setInterval(update, 1000) : setInterval(update, 10000);
 
+        // Make entire banner clickable
+        stripEl.addEventListener('click', function(e){
+            // Don't navigate if clicking copy button
+            if (e.target.closest('#th-bf-copy')) {
+                return;
+            }
+
+            if (ctaUrl && ctaUrl.trim() !== '') {
+                var targetUrl = ctaUrl;
+                // WHMCS CTA rewrite: always override promocode if CTA targets /cloud/
+                if (targetUrl.indexOf('/cloud/') !== -1) {
+                    targetUrl = rewritePromocode(targetUrl, promo);
+                }
+                window.location.href = targetUrl;
+            }
+        });
+
         // copy handler
         if (copyBtn) {
             copyBtn.addEventListener('click', function(e){
                 e.preventDefault();
+                e.stopPropagation(); // Prevent banner click
                 if (!promo || promo.trim() === '') return;
                 copyToClipboard(promo, function(ok){
                     showTooltip(copyBtn, ok ? 'Copied!' : 'Copy failed');
@@ -677,19 +724,6 @@ add_action('wp_footer', function(){
                 tip.style.opacity = '0';
                 setTimeout(function(){ tip.remove(); }, 200);
             }, 1200);
-        }
-
-        // WHMCS CTA rewrite: always override promocode if CTA targets /cloud/
-        var cta = document.getElementById('th-bf-cta');
-        if (cta) {
-            cta.addEventListener('click', function(e){
-                var href = cta.getAttribute('href') || '';
-                if (href.indexOf('/cloud/') !== -1) {
-                    e.preventDefault();
-                    var newUrl = rewritePromocode(href, promo);
-                    window.location.href = newUrl;
-                }
-            });
         }
 
         function rewritePromocode(url, promoCode) {
