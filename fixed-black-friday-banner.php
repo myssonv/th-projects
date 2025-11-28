@@ -135,14 +135,55 @@ function th_bf_admin_page(){
         <div id="th-bf-tab-settings" class="th-bf-tab-content">
         <form method="post" action="options.php" id="th-bf-settings-form">
             <?php settings_fields('th_bf_group'); ?>
-            <?php do_settings_sections('th-bf-banner'); ?>
 
+            <h2>General Settings</h2>
             <table class="form-table" role="presentation">
                 <tbody>
-                    <tr><th scope="row">Enable</th><td><?php th_bf_field_enable(); ?></td></tr>
-                    <tr><th scope="row">Start</th><td><?php th_bf_field_start(); ?></td></tr>
-                    <tr><th scope="row">End</th><td><?php th_bf_field_end(); ?></td></tr>
-                    <tr><th scope="row">Default CTA</th><td><?php th_bf_field_default_cta(); ?></td></tr>
+                    <tr><th scope="row">Enable Banner</th><td><?php th_bf_field_enable(); ?></td></tr>
+                    <tr><th scope="row">Start Date/Time</th><td><?php th_bf_field_start(); ?></td></tr>
+                    <tr><th scope="row">End Date/Time</th><td><?php th_bf_field_end(); ?></td></tr>
+                    <tr><th scope="row">Default CTA URL</th><td><?php th_bf_field_default_cta(); ?></td></tr>
+                </tbody>
+            </table>
+
+            <h2>Display Locations</h2>
+            <p style="color:#666;">Choose where the banner should appear on your site.</p>
+            <table class="form-table" role="presentation">
+                <tbody>
+                    <?php
+                    $show_on = isset($initial['show_on']) ? $initial['show_on'] : th_bf_default_config()['show_on'];
+                    ?>
+                    <tr>
+                        <th scope="row">Show on Homepage</th>
+                        <td><label><input type="checkbox" name="th_bf_opts[show_on][homepage]" value="1" <?php checked($show_on['homepage'], '1'); ?>> Enable on homepage</label></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Show on Archives</th>
+                        <td><label><input type="checkbox" name="th_bf_opts[show_on][archives]" value="1" <?php checked($show_on['archives'], '1'); ?>> Enable on category/tag archives</label></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Show on Blog Page</th>
+                        <td><label><input type="checkbox" name="th_bf_opts[show_on][blog_page]" value="1" <?php checked($show_on['blog_page'], '1'); ?>> Enable on main blog page</label></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Show on Single Posts</th>
+                        <td><label><input type="checkbox" name="th_bf_opts[show_on][single_posts]" value="1" <?php checked($show_on['single_posts'], '1'); ?>> Enable on individual blog posts</label></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Show on Pages</th>
+                        <td><label><input type="checkbox" name="th_bf_opts[show_on][pages]" value="1" <?php checked($show_on['pages'], '1'); ?>> Enable on WordPress pages (About, Contact, etc.)</label></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Show on All Pages</th>
+                        <td><label><input type="checkbox" name="th_bf_opts[show_on][all_pages]" value="1" <?php checked($show_on['all_pages'], '1'); ?>> Enable on all pages (overrides above settings)</label></td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Exclude URLs</th>
+                        <td>
+                            <textarea name="th_bf_opts[exclude_urls]" rows="3" style="width:100%; max-width:500px;" placeholder="/contact&#10;/cart&#10;/checkout"><?php echo esc_textarea(isset($initial['exclude_urls']) ? $initial['exclude_urls'] : ''); ?></textarea>
+                            <p class="description">Enter URLs to exclude (one per line). Banner will not show on these pages. Example: /contact or /cart</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
 
@@ -152,19 +193,21 @@ function th_bf_admin_page(){
             <div style="margin-bottom:12px;">
                 <button type="button" class="button" id="th-bf-enable-all">Enable All</button>
                 <button type="button" class="button" id="th-bf-disable-all">Disable All</button>
+                <button type="button" class="button button-primary" id="th-bf-add-product">+ Add Custom Product</button>
             </div>
 
-            <table class="widefat" style="max-width:1200px;">
+<table class="widefat" style="max-width:100%;" id="th-bf-products-table">
                 <thead><tr>
                     <th style="width:40px;">Show</th>
-                    <th>Product key</th>
+                    <th style="width:150px;">Product key</th>
                     <th>Promo code</th>
                     <th>Title</th>
                     <th>Subtitle</th>
                     <th>CTA text</th>
                     <th>CTA URL</th>
+                    <th style="width:50px;">Action</th>
                 </tr></thead>
-                <tbody>
+                <tbody id="th-bf-products-tbody">
                 <?php
                 // Use $saved_groups for initial values so cleared values persist
                 foreach ($saved_groups as $key => $row) {
@@ -174,14 +217,38 @@ function th_bf_admin_page(){
                     $sub = isset($row['sub']) ? esc_attr($row['sub']) : '';
                     $cta_text = isset($row['cta_text']) ? esc_attr($row['cta_text']) : '';
                     $cta_url = isset($row['cta_url']) ? esc_attr($row['cta_url']) : '';
-                    echo '<tr>';
-                    echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[groups]['.esc_attr($key).'][show]" value="1" '. checked($show,'1',false).'></td>';
+                    echo '<tr data-product-type="default">';
+                    echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[groups]['.esc_attr($key).'][show]" value="1" class="th-bf-auto-save" '. checked($show,'1',false).'></td>';
                     echo '<td><strong>'.esc_html($key).'</strong></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][promo]" value="'. $promo .'" placeholder="e.g., BF25SAVE" style="width:120px;"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][title]" value="'. $title .'" placeholder="e.g., Black Friday Deal" style="width:220px;"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][sub]" value="'. $sub .'" placeholder="e.g., Save big this season" style="width:260px;"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_text]" value="'. $cta_text .'" placeholder="e.g., Claim Deal" style="width:120px;"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_url]" value="'. $cta_url .'" placeholder="e.g., /deals" style="width:180px;"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][promo]" value="'. $promo .'" placeholder="e.g., BF25SAVE" style="width:120px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][title]" value="'. $title .'" placeholder="e.g., Black Friday Deal" style="width:220px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][sub]" value="'. $sub .'" placeholder="e.g., Save big this season" style="width:260px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_text]" value="'. $cta_text .'" placeholder="e.g., Claim Deal" style="width:120px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_url]" value="'. $cta_url .'" placeholder="e.g., /deals" style="width:180px;" class="th-bf-auto-save"></td>';
+                    echo '<td></td>';
+                    echo '</tr>';
+                }
+
+                // Render custom products
+                $custom_products = isset($initial['custom_products']) ? $initial['custom_products'] : [];
+                foreach ($custom_products as $idx => $custom) {
+                    $key = isset($custom['key']) ? esc_attr($custom['key']) : '';
+                    $show = isset($custom['show']) ? $custom['show'] : '0';
+                    $promo = isset($custom['promo']) ? esc_attr($custom['promo']) : '';
+                    $title = isset($custom['title']) ? esc_attr($custom['title']) : '';
+                    $sub = isset($custom['sub']) ? esc_attr($custom['sub']) : '';
+                    $cta_text = isset($custom['cta_text']) ? esc_attr($custom['cta_text']) : '';
+                    $cta_url = isset($custom['cta_url']) ? esc_attr($custom['cta_url']) : '';
+
+                    echo '<tr data-product-type="custom">';
+                    echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products]['.$idx.'][show]" value="1" class="th-bf-auto-save" '. checked($show,'1',false).'></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][key]" value="'. $key .'" placeholder="e.g., tld_uk" style="width:140px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][promo]" value="'. $promo .'" placeholder="e.g., BF25SAVE" style="width:120px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][title]" value="'. $title .'" placeholder="e.g., Black Friday Deal" style="width:220px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][sub]" value="'. $sub .'" placeholder="e.g., Save big this season" style="width:260px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][cta_text]" value="'. $cta_text .'" placeholder="e.g., Claim Deal" style="width:120px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][cta_url]" value="'. $cta_url .'" placeholder="e.g., /deals" style="width:180px;" class="th-bf-auto-save"></td>';
+                    echo '<td><button type="button" class="button button-small th-bf-delete-product" style="color:#a00;">Delete</button></td>';
                     echo '</tr>';
                 }
                 ?>
@@ -316,12 +383,71 @@ function th_bf_admin_page(){
         </div>
         </div>
 
-        <script>
-        // Tab switching
+<script>
+        // Tab switching, bulk actions, custom products, and AJAX auto-save
         (function(){
+            var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
             var tabs = document.querySelectorAll('.nav-tab-wrapper .nav-tab');
             var tabContents = document.querySelectorAll('.th-bf-tab-content');
+            var customProductIndex = <?php echo count($custom_products); ?>;
+            var saveTimer = null;
+            var saveIndicator = null;
 
+            // Create save indicator
+            function createSaveIndicator() {
+                if (!saveIndicator) {
+                    saveIndicator = document.createElement('div');
+                    saveIndicator.style.cssText = 'position:fixed; top:32px; right:20px; background:#fff; border:1px solid #ccc; border-radius:4px; padding:8px 12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); z-index:100000; display:none; font-size:13px;';
+                    document.body.appendChild(saveIndicator);
+                }
+                return saveIndicator;
+            }
+
+            function showSaveStatus(message, type) {
+                var indicator = createSaveIndicator();
+                indicator.textContent = message;
+                indicator.style.borderColor = type === 'success' ? '#46b450' : (type === 'error' ? '#dc3232' : '#ccc');
+                indicator.style.color = type === 'success' ? '#46b450' : (type === 'error' ? '#dc3232' : '#666');
+                indicator.style.display = 'block';
+
+                setTimeout(function(){
+                    indicator.style.display = 'none';
+                }, 2000);
+            }
+
+            // AJAX auto-save
+            function autoSave() {
+                if (saveTimer) {
+                    clearTimeout(saveTimer);
+                }
+
+                saveTimer = setTimeout(function(){
+                    var form = document.getElementById('th-bf-settings-form');
+                    var formData = new FormData(form);
+                    formData.append('action', 'th_bf_save_settings');
+
+                    showSaveStatus('Saving...', 'pending');
+
+                    fetch(ajaxurl, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin'
+                    })
+                    .then(r => r.json())
+                    .then(function(response){
+                        if (response.success) {
+                            showSaveStatus('Settings saved', 'success');
+                        } else {
+                            showSaveStatus('Save failed', 'error');
+                        }
+                    })
+                    .catch(function(){
+                        showSaveStatus('Save error', 'error');
+                    });
+                }, 800); // Debounce 800ms
+            }
+
+            // Tab switching
             tabs.forEach(function(tab){
                 tab.addEventListener('click', function(e){
                     e.preventDefault();
@@ -353,12 +479,71 @@ function th_bf_admin_page(){
 
             // Bulk actions
             document.getElementById('th-bf-enable-all').addEventListener('click', function(){
-                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
+                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"], input[type="checkbox"][name^="th_bf_opts[custom_products]"][name$="[show]"]');
                 checkboxes.forEach(function(cb){ cb.checked = true; });
+                autoSave();
             });
             document.getElementById('th-bf-disable-all').addEventListener('click', function(){
-                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
+                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"], input[type="checkbox"][name^="th_bf_opts[custom_products]"][name$="[show]"]');
                 checkboxes.forEach(function(cb){ cb.checked = false; });
+                autoSave();
+            });
+
+            // Add custom product
+            document.getElementById('th-bf-add-product').addEventListener('click', function(){
+                var tbody = document.getElementById('th-bf-products-tbody');
+                var tr = document.createElement('tr');
+                tr.setAttribute('data-product-type', 'custom');
+
+                var idx = customProductIndex++;
+
+                tr.innerHTML =
+                    '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products][' + idx + '][show]" value="1" class="th-bf-auto-save"></td>' +
+                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][key]" value="" placeholder="e.g., tld_uk" style="width:140px;" class="th-bf-auto-save"></td>' +
+                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][promo]" value="" placeholder="e.g., BF25SAVE" style="width:120px;" class="th-bf-auto-save"></td>' +
+                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][title]" value="" placeholder="e.g., Black Friday Deal" style="width:220px;" class="th-bf-auto-save"></td>' +
+                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][sub]" value="" placeholder="e.g., Save big this season" style="width:260px;" class="th-bf-auto-save"></td>' +
+                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_text]" value="" placeholder="e.g., Claim Deal" style="width:120px;" class="th-bf-auto-save"></td>' +
+                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_url]" value="" placeholder="e.g., /deals" style="width:180px;" class="th-bf-auto-save"></td>' +
+                    '<td><button type="button" class="button button-small th-bf-delete-product" style="color:#a00;">Delete</button></td>';
+
+                tbody.appendChild(tr);
+
+                // Attach auto-save listeners to new inputs
+                tr.querySelectorAll('.th-bf-auto-save').forEach(function(input){
+                    input.addEventListener('input', autoSave);
+                    input.addEventListener('change', autoSave);
+                });
+
+                // Attach delete handler
+                tr.querySelector('.th-bf-delete-product').addEventListener('click', function(){
+                    if (confirm('Delete this custom product?')) {
+                        tr.remove();
+                        autoSave();
+                    }
+                });
+            });
+
+            // Delete custom product (for existing rows)
+            document.addEventListener('click', function(e){
+                if (e.target.classList.contains('th-bf-delete-product')) {
+                    if (confirm('Delete this custom product?')) {
+                        e.target.closest('tr').remove();
+                        autoSave();
+                    }
+                }
+            });
+
+            // Auto-save on input change
+            document.querySelectorAll('.th-bf-auto-save').forEach(function(input){
+                input.addEventListener('input', autoSave);
+                input.addEventListener('change', autoSave);
+            });
+
+            // Also auto-save display location checkboxes and exclude URLs
+            document.querySelectorAll('input[name^="th_bf_opts[show_on]"], textarea[name="th_bf_opts[exclude_urls]"]').forEach(function(input){
+                input.addEventListener('input', autoSave);
+                input.addEventListener('change', autoSave);
             });
         })();
         </script>
@@ -375,8 +560,21 @@ function th_bf_sanitize($input) {
     $out['end'] = isset($input['end']) ? sanitize_text_field($input['end']) : '';
     $out['default_cta'] = isset($input['default_cta']) ? esc_url_raw($input['default_cta']) : $defaults['default_cta'];
 
+    // Sanitize display location settings
+    $out['show_on'] = [
+        'homepage' => isset($input['show_on']['homepage']) && $input['show_on']['homepage'] == '1' ? '1' : '0',
+        'archives' => isset($input['show_on']['archives']) && $input['show_on']['archives'] == '1' ? '1' : '0',
+        'blog_page' => isset($input['show_on']['blog_page']) && $input['show_on']['blog_page'] == '1' ? '1' : '0',
+        'single_posts' => isset($input['show_on']['single_posts']) && $input['show_on']['single_posts'] == '1' ? '1' : '0',
+        'pages' => isset($input['show_on']['pages']) && $input['show_on']['pages'] == '1' ? '1' : '0',
+        'all_pages' => isset($input['show_on']['all_pages']) && $input['show_on']['all_pages'] == '1' ? '1' : '0'
+    ];
+
+    // Sanitize exclude URLs
+    $out['exclude_urls'] = isset($input['exclude_urls']) ? sanitize_textarea_field($input['exclude_urls']) : '';
+
+    // Sanitize default groups
     $out['groups'] = [];
-    // iterate expected groups and use whatever user provided; do not fill missing with defaults
     $keys = array_keys($defaults['groups']);
     foreach ($keys as $k) {
         $in = isset($input['groups'][$k]) ? $input['groups'][$k] : [];
@@ -389,6 +587,28 @@ function th_bf_sanitize($input) {
             'cta_url' => isset($in['cta_url']) ? esc_url_raw($in['cta_url']) : ''
         ];
     }
+
+    // Sanitize custom products
+    $out['custom_products'] = [];
+    if (isset($input['custom_products']) && is_array($input['custom_products'])) {
+        foreach ($input['custom_products'] as $custom) {
+            // Skip empty product keys
+            if (empty($custom['key'])) {
+                continue;
+            }
+
+            $out['custom_products'][] = [
+                'key' => sanitize_text_field($custom['key']),
+                'show' => isset($custom['show']) && $custom['show'] == '1' ? '1' : '0',
+                'promo' => isset($custom['promo']) ? sanitize_text_field($custom['promo']) : '',
+                'title' => isset($custom['title']) ? sanitize_text_field($custom['title']) : '',
+                'sub' => isset($custom['sub']) ? sanitize_text_field($custom['sub']) : '',
+                'cta_text' => isset($custom['cta_text']) ? sanitize_text_field($custom['cta_text']) : '',
+                'cta_url' => isset($custom['cta_url']) ? esc_url_raw($custom['cta_url']) : ''
+            ];
+        }
+    }
+
     return $out;
 }
 
@@ -464,6 +684,31 @@ function th_bf_reset_stats() {
     wp_send_json_success('Stats reset');
 }
 
+// AJAX save settings
+add_action('wp_ajax_th_bf_save_settings', 'th_bf_save_settings');
+
+function th_bf_save_settings() {
+    // Check nonce for security
+    if (!isset($_POST['_wpnonce']) || !wp_verify_nonce($_POST['_wpnonce'], 'th_bf_group-options')) {
+        wp_send_json_error('Invalid nonce');
+        return;
+    }
+
+    // Check user permissions
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Permission denied');
+        return;
+    }
+
+    // Sanitize and save
+    $input = isset($_POST['th_bf_opts']) ? $_POST['th_bf_opts'] : [];
+    $sanitized = th_bf_sanitize($input);
+
+    update_option('th_bf_opts', $sanitized);
+
+    wp_send_json_success('Settings saved');
+}
+
 /* ------------------------
    3) FRONTEND: output template (client-side insertion) - footer hook
    ------------------------ */
@@ -483,6 +728,42 @@ add_action('wp_footer', function(){
     }
 
     if (!isset($opts['enable']) || $opts['enable'] !== '1') return;
+
+    // Check display location settings
+    $show_on = isset($opts['show_on']) ? $opts['show_on'] : $defaults['show_on'];
+    $exclude_urls = isset($opts['exclude_urls']) ? $opts['exclude_urls'] : '';
+
+    // Parse excluded URLs
+    $excluded_paths = array_filter(array_map('trim', explode("\n", $exclude_urls)));
+    foreach ($excluded_paths as $excluded_path) {
+        if (!empty($excluded_path) && strpos($uri, $excluded_path) !== false) {
+            return; // Don't show banner on excluded URLs
+        }
+    }
+
+    // Check if banner should be shown based on page type
+    $should_show = false;
+
+    if ($show_on['all_pages'] === '1') {
+        $should_show = true;
+    } else {
+        if (is_front_page() && $show_on['homepage'] === '1') {
+            $should_show = true;
+        } elseif (is_archive() && $show_on['archives'] === '1') {
+            $should_show = true;
+        } elseif (is_home() && $show_on['blog_page'] === '1') {
+            $should_show = true;
+        } elseif (is_singular('post') && $show_on['single_posts'] === '1') {
+            $should_show = true;
+        } elseif (is_page() && $show_on['pages'] === '1') {
+            $should_show = true;
+        }
+    }
+
+    // If location check fails, still proceed with URL-based matching for backward compatibility
+    if (!$should_show && !is_singular('post')) {
+        // Will check URL patterns below
+    }
 
     // Build mapping patterns -> group key
     $map = [
@@ -543,6 +824,8 @@ add_action('wp_footer', function(){
 
     // find matching group based on URI patterns
     $found = false;
+    $is_custom = false;
+
     foreach ($map as $key => $patterns) {
         foreach ($patterns as $p) {
             if (strpos($uri, $p) !== false) {
@@ -551,14 +834,40 @@ add_action('wp_footer', function(){
             }
         }
     }
-    if (!$found) return;
 
-    $group_key = $found;
-    // use exact saved group if exists; otherwise fallback to default row (but don't write it)
-    $group = isset($opts['groups'][$group_key]) ? $opts['groups'][$group_key] : (isset($defaults['groups'][$group_key]) ? $defaults['groups'][$group_key] : null);
-    if (!$group) return;
-    // Only render if show checkbox is enabled for this group
-    if (!isset($group['show']) || $group['show'] !== '1') return;
+    // Check custom products if no default match found
+    if (!$found) {
+        $custom_products = isset($opts['custom_products']) ? $opts['custom_products'] : [];
+        foreach ($custom_products as $custom) {
+            $custom_key = isset($custom['key']) ? $custom['key'] : '';
+            if (!empty($custom_key) && strpos($uri, '/' . $custom_key) !== false) {
+                $found = $custom_key;
+                $is_custom = true;
+                $group = $custom;
+                break;
+            }
+        }
+    }
+
+    if (!$found && !$should_show) return;
+
+    if (!$is_custom && $found) {
+        $group_key = $found;
+        // use exact saved group if exists; otherwise fallback to default row (but don't write it)
+        $group = isset($opts['groups'][$group_key]) ? $opts['groups'][$group_key] : (isset($defaults['groups'][$group_key]) ? $defaults['groups'][$group_key] : null);
+        if (!$group) return;
+        // Only render if show checkbox is enabled for this group
+        if (!isset($group['show']) || $group['show'] !== '1') return;
+    } elseif ($is_custom) {
+        $group_key = $found;
+        // Only render if show checkbox is enabled for custom product
+        if (!isset($group['show']) || $group['show'] !== '1') return;
+    } elseif ($should_show) {
+        // If should_show is true but no specific product matched, don't render
+        return;
+    } else {
+        return;
+    }
 
     $title = isset($group['title']) ? $group['title'] : '';
     $subtitle = isset($group['sub']) ? $group['sub'] : '';
