@@ -122,21 +122,18 @@ function th_bf_admin_page(){
         }
     }
 
-    // Get active tab
-    $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'settings';
-
     // build form
     ?>
     <div class="wrap">
         <h1>Black Friday Banner</h1>
 
         <h2 class="nav-tab-wrapper">
-            <a href="?page=th-bf-banner&tab=settings" class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">Settings</a>
-            <a href="?page=th-bf-banner&tab=stats" class="nav-tab <?php echo $active_tab === 'stats' ? 'nav-tab-active' : ''; ?>">Click Stats</a>
+            <a href="#" data-tab="settings" class="nav-tab nav-tab-active">Settings</a>
+            <a href="#" data-tab="stats" class="nav-tab">Click Stats</a>
         </h2>
 
-        <?php if ($active_tab === 'settings'): ?>
-        <form method="post" action="options.php">
+        <div id="th-bf-tab-settings" class="th-bf-tab-content">
+        <form method="post" action="options.php" id="th-bf-settings-form">
             <?php settings_fields('th_bf_group'); ?>
             <?php do_settings_sections('th-bf-banner'); ?>
 
@@ -180,11 +177,11 @@ function th_bf_admin_page(){
                     echo '<tr>';
                     echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[groups]['.esc_attr($key).'][show]" value="1" '. checked($show,'1',false).'></td>';
                     echo '<td><strong>'.esc_html($key).'</strong></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][promo]" value="'. $promo .'" style="width:120px;"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][title]" value="'. $title .'" style="width:220px;"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][sub]" value="'. $sub .'" style="width:260px;"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_text]" value="'. $cta_text .'" style="width:120px;"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_url]" value="'. $cta_url .'" style="width:180px;"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][promo]" value="'. $promo .'" placeholder="e.g., BF25SAVE" style="width:120px;"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][title]" value="'. $title .'" placeholder="e.g., Black Friday Deal" style="width:220px;"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][sub]" value="'. $sub .'" placeholder="e.g., Save big this season" style="width:260px;"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_text]" value="'. $cta_text .'" placeholder="e.g., Claim Deal" style="width:120px;"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_url]" value="'. $cta_url .'" placeholder="e.g., /deals" style="width:180px;"></td>';
                     echo '</tr>';
                 }
                 ?>
@@ -193,22 +190,9 @@ function th_bf_admin_page(){
 
             <?php submit_button('Save banner settings'); ?>
         </form>
+        </div>
 
-        <script>
-        (function(){
-            document.getElementById('th-bf-enable-all').addEventListener('click', function(){
-                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
-                checkboxes.forEach(function(cb){ cb.checked = true; });
-            });
-            document.getElementById('th-bf-disable-all').addEventListener('click', function(){
-                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
-                checkboxes.forEach(function(cb){ cb.checked = false; });
-            });
-        })();
-        </script>
-
-        <?php elseif ($active_tab === 'stats'): ?>
-
+        <div id="th-bf-tab-stats" class="th-bf-tab-content" style="display:none;">
         <div style="margin-top:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
                 <h2 style="margin:0;">Banner Click Analytics</h2>
@@ -323,13 +307,61 @@ function th_bf_admin_page(){
                 });
             });
 
-            // Load stats on page load
-            loadStats();
+            // Load stats on page load if stats tab is active
+            if (document.getElementById('th-bf-tab-stats').style.display !== 'none') {
+                loadStats();
+            }
         })();
         </script>
+        </div>
+        </div>
 
-        <?php endif; ?>
-    </div>
+        <script>
+        // Tab switching
+        (function(){
+            var tabs = document.querySelectorAll('.nav-tab-wrapper .nav-tab');
+            var tabContents = document.querySelectorAll('.th-bf-tab-content');
+
+            tabs.forEach(function(tab){
+                tab.addEventListener('click', function(e){
+                    e.preventDefault();
+                    var targetTab = this.getAttribute('data-tab');
+
+                    // Update active tab
+                    tabs.forEach(function(t){ t.classList.remove('nav-tab-active'); });
+                    this.classList.add('nav-tab-active');
+
+                    // Show/hide content
+                    tabContents.forEach(function(content){
+                        content.style.display = 'none';
+                    });
+
+                    var targetContent = document.getElementById('th-bf-tab-' + targetTab);
+                    if (targetContent) {
+                        targetContent.style.display = 'block';
+
+                        // Load stats if switching to stats tab
+                        if (targetTab === 'stats') {
+                            var loadStatsBtn = document.getElementById('th-bf-refresh-stats');
+                            if (loadStatsBtn) {
+                                loadStatsBtn.click();
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Bulk actions
+            document.getElementById('th-bf-enable-all').addEventListener('click', function(){
+                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
+                checkboxes.forEach(function(cb){ cb.checked = true; });
+            });
+            document.getElementById('th-bf-disable-all').addEventListener('click', function(){
+                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"]');
+                checkboxes.forEach(function(cb){ cb.checked = false; });
+            });
+        })();
+        </script>
     <?php
 }
 
