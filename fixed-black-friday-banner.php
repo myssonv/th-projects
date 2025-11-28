@@ -1,3 +1,4 @@
+<?php
 if (!defined('ABSPATH')) exit;
 
 /**
@@ -758,6 +759,7 @@ function th_bf_admin_page(){
         })();
         </script>
     <?php
+}
 
 // sanitize callback - respects cleared values (no forced defaults)
 function th_bf_sanitize($input) {
