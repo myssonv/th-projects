@@ -386,6 +386,14 @@ function th_bf_admin_page(){
 <script>
         // Tab switching, bulk actions, custom products, and AJAX auto-save
         (function(){
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initAdminScript);
+            } else {
+                initAdminScript();
+            }
+
+            function initAdminScript() {
             var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
             var tabs = document.querySelectorAll('.nav-tab-wrapper .nav-tab');
             var tabContents = document.querySelectorAll('.th-bf-tab-content');
@@ -478,19 +486,29 @@ function th_bf_admin_page(){
             });
 
             // Bulk actions
-            document.getElementById('th-bf-enable-all').addEventListener('click', function(){
-                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"], input[type="checkbox"][name^="th_bf_opts[custom_products]"][name$="[show]"]');
-                checkboxes.forEach(function(cb){ cb.checked = true; });
-                autoSave();
-            });
-            document.getElementById('th-bf-disable-all').addEventListener('click', function(){
-                var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"], input[type="checkbox"][name^="th_bf_opts[custom_products]"][name$="[show]"]');
-                checkboxes.forEach(function(cb){ cb.checked = false; });
-                autoSave();
-            });
+            var enableAllBtn = document.getElementById('th-bf-enable-all');
+            var disableAllBtn = document.getElementById('th-bf-disable-all');
+            var addProductBtn = document.getElementById('th-bf-add-product');
+
+            if (enableAllBtn) {
+                enableAllBtn.addEventListener('click', function(){
+                    var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"], input[type="checkbox"][name^="th_bf_opts[custom_products]"][name$="[show]"]');
+                    checkboxes.forEach(function(cb){ cb.checked = true; });
+                    autoSave();
+                });
+            }
+
+            if (disableAllBtn) {
+                disableAllBtn.addEventListener('click', function(){
+                    var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"], input[type="checkbox"][name^="th_bf_opts[custom_products]"][name$="[show]"]');
+                    checkboxes.forEach(function(cb){ cb.checked = false; });
+                    autoSave();
+                });
+            }
 
             // Add custom product
-            document.getElementById('th-bf-add-product').addEventListener('click', function(){
+            if (addProductBtn) {
+                addProductBtn.addEventListener('click', function(){
                 var tbody = document.getElementById('th-bf-products-tbody');
                 var tr = document.createElement('tr');
                 tr.setAttribute('data-product-type', 'custom');
@@ -522,7 +540,8 @@ function th_bf_admin_page(){
                         autoSave();
                     }
                 });
-            });
+                });
+            }
 
             // Delete custom product (for existing rows)
             document.addEventListener('click', function(e){
@@ -545,6 +564,7 @@ function th_bf_admin_page(){
                 input.addEventListener('input', autoSave);
                 input.addEventListener('change', autoSave);
             });
+            } // end initAdminScript
         })();
         </script>
     <?php
@@ -862,9 +882,34 @@ add_action('wp_footer', function(){
         $group_key = $found;
         // Only render if show checkbox is enabled for custom product
         if (!isset($group['show']) || $group['show'] !== '1') return;
-    } elseif ($should_show) {
-        // If should_show is true but no specific product matched, don't render
-        return;
+    } elseif ($should_show && !$found) {
+        // If should_show is true but no specific product matched, use first enabled product as fallback
+        $group_key = null;
+        $group = null;
+
+        // Find first enabled product from groups
+        foreach ($opts['groups'] as $key => $prod) {
+            if (isset($prod['show']) && $prod['show'] === '1' && !empty($prod['title'])) {
+                $group_key = $key;
+                $group = $prod;
+                break;
+            }
+        }
+
+        // If no enabled group found, try custom products
+        if (!$group) {
+            $custom_products = isset($opts['custom_products']) ? $opts['custom_products'] : [];
+            foreach ($custom_products as $custom) {
+                if (isset($custom['show']) && $custom['show'] === '1' && !empty($custom['title'])) {
+                    $group_key = isset($custom['key']) ? $custom['key'] : 'custom_banner';
+                    $group = $custom;
+                    break;
+                }
+            }
+        }
+
+        // If still no group found, don't render
+        if (!$group || !$group_key) return;
     } else {
         return;
     }
