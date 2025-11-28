@@ -34,37 +34,37 @@ function th_bf_default_config() {
         'custom_products' => [],
         'groups' => [
             // Domains
-            'general_domains' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'ke_domains' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'domain_transfer' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'free_domains' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'whois' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'general_domains' => ['show'=>'0','promo'=>'BF2024','title'=>'Domain Sale','sub'=>'Register your perfect domain','cta_text'=>'Get Domain','cta_url'=>'/domains#content'],
+            'ke_domains' => ['show'=>'0','promo'=>'KENYA24','title'=>'.KE Domain Special','sub'=>'Get your .co.ke domain today','cta_text'=>'Register Now','cta_url'=>'/ke-domain#content'],
+            'domain_transfer' => ['show'=>'0','promo'=>'TRANSFER24','title'=>'Transfer Domain','sub'=>'Move your domain to us','cta_text'=>'Transfer Now','cta_url'=>'/domains#content'],
+            'free_domains' => ['show'=>'0','promo'=>'','title'=>'Free Domain','sub'=>'Get a free domain with hosting','cta_text'=>'Claim Free Domain','cta_url'=>'/domains/free#content'],
+            'whois' => ['show'=>'0','promo'=>'','title'=>'Domain Search','sub'=>'Find your perfect domain','cta_text'=>'Search Now','cta_url'=>'/domains/whois#content'],
             // TLDs
-            'tld_com' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'tld_za' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'tld_ng' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'tld_us' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'tld_com' => ['show'=>'0','promo'=>'COM24','title'=>'.COM Domain Sale','sub'=>'Register .com domains','cta_text'=>'Get .COM','cta_url'=>'/domains/tlds/com#content'],
+            'tld_za' => ['show'=>'0','promo'=>'ZA24','title'=>'.ZA Domain Special','sub'=>'South African domains','cta_text'=>'Register .ZA','cta_url'=>'/domains/tlds/za#content'],
+            'tld_ng' => ['show'=>'0','promo'=>'NG24','title'=>'.NG Domain Sale','sub'=>'Nigerian domains','cta_text'=>'Get .NG','cta_url'=>'/domains/tlds/ng#content'],
+            'tld_us' => ['show'=>'0','promo'=>'US24','title'=>'.US Domain Special','sub'=>'American domains','cta_text'=>'Register .US','cta_url'=>'/domains/tlds/us#content'],
             // Hosting
-            'general_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'cpanel_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'cyberpanel_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'windows_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'reseller_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'free_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'dedicated_servers' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'general_hosting' => ['show'=>'0','promo'=>'HOST24','title'=>'Web Hosting Sale','sub'=>'Fast & reliable hosting','cta_text'=>'Get Hosting','cta_url'=>'/hosting#content'],
+            'cpanel_hosting' => ['show'=>'0','promo'=>'CPANEL24','title'=>'cPanel Hosting','sub'=>'Easy website management','cta_text'=>'Start Now','cta_url'=>'/hosting/cpanel#content'],
+            'cyberpanel_hosting' => ['show'=>'0','promo'=>'CYBER24','title'=>'CyberPanel Hosting','sub'=>'Lightning fast hosting','cta_text'=>'Get Started','cta_url'=>'/hosting/cyberpanel#content'],
+            'windows_hosting' => ['show'=>'0','promo'=>'WIN24','title'=>'Windows Hosting','sub'=>'ASP.NET hosting','cta_text'=>'Start Now','cta_url'=>'/hosting/windows#content'],
+            'reseller_hosting' => ['show'=>'0','promo'=>'RESELL24','title'=>'Reseller Hosting','sub'=>'Start your hosting business','cta_text'=>'Become Reseller','cta_url'=>'/hosting/reseller#content'],
+            'free_hosting' => ['show'=>'0','promo'=>'','title'=>'Free Hosting','sub'=>'Try hosting for free','cta_text'=>'Get Free Hosting','cta_url'=>'/hosting/free#content'],
+            'dedicated_servers' => ['show'=>'0','promo'=>'SERVER24','title'=>'Dedicated Servers','sub'=>'Ultimate performance','cta_text'=>'View Servers','cta_url'=>'/hosting/dedicated-servers#content'],
             // Email, VPS, SSL, services
-            'email_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'vps_hosting' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'managed_vps' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'ssl' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'ai_builder' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'online_store' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'local_seo' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'email_hosting' => ['show'=>'0','promo'=>'EMAIL24','title'=>'Email Hosting','sub'=>'Professional email','cta_text'=>'Get Email','cta_url'=>'/hosting/email#content'],
+            'vps_hosting' => ['show'=>'0','promo'=>'VPS24','title'=>'VPS Hosting','sub'=>'Scalable cloud servers','cta_text'=>'Get VPS','cta_url'=>'/vps-hosting#content'],
+            'managed_vps' => ['show'=>'0','promo'=>'MVPS24','title'=>'Managed VPS','sub'=>'Fully managed servers','cta_text'=>'View Plans','cta_url'=>'/vps-hosting/managed#content'],
+            'ssl' => ['show'=>'0','promo'=>'SSL24','title'=>'SSL Certificates','sub'=>'Secure your website','cta_text'=>'Get SSL','cta_url'=>'/ssl#content'],
+            'ai_builder' => ['show'=>'0','promo'=>'AI24','title'=>'AI Website Builder','sub'=>'Build sites with AI','cta_text'=>'Try Now','cta_url'=>'/ai-website-builder#content'],
+            'online_store' => ['show'=>'0','promo'=>'STORE24','title'=>'Online Store','sub'=>'Start selling online','cta_text'=>'Create Store','cta_url'=>'/online-store#content'],
+            'local_seo' => ['show'=>'0','promo'=>'SEO24','title'=>'Local SEO','sub'=>'Get found locally','cta_text'=>'Get Started','cta_url'=>'/local-seo#content'],
             // WHMCS
-            'whmcs_cart' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
-            'whmcs_store' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
+            'whmcs_cart' => ['show'=>'0','promo'=>'CART24','title'=>'Shopping Cart','sub'=>'Complete your order','cta_text'=>'View Cart','cta_url'=>'/cloud/cart.php#content'],
+            'whmcs_store' => ['show'=>'0','promo'=>'SHOP24','title'=>'Our Store','sub'=>'Browse all products','cta_text'=>'Browse Store','cta_url'=>'/cloud/store#content'],
             // Blog combo
-            'blog_combo' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>'']
+            'blog_combo' => ['show'=>'0','promo'=>'COMBO24','title'=>'Hosting + Domain Deal','sub'=>'Complete website package','cta_text'=>'View Deals','cta_url'=>'/promos#content']
         ]
     ];
 }
@@ -188,12 +188,13 @@ function th_bf_admin_page(){
             </table>
 
             <h2>Per-product settings</h2>
-            <p style="color:#666;">Use the Show checkbox to hide the banner on a product. Leave promo empty to allow "No promo code required".</p>
+            <p style="color:#666;">Use the Show checkbox to hide the banner on a product. Modify defaults or clear fields as needed.</p>
 
             <div style="margin-bottom:12px;">
                 <button type="button" class="button" id="th-bf-enable-all">Enable All</button>
                 <button type="button" class="button" id="th-bf-disable-all">Disable All</button>
-                <button type="button" class="button button-primary" id="th-bf-add-product">+ Add Custom Product</button>
+                <button type="button" class="button" id="th-bf-clear-all">Clear All Fields</button>
+                <button type="button" class="button" id="th-bf-restore-defaults">Restore Defaults</button>
             </div>
 
 <table class="widefat" style="max-width:100%;" id="th-bf-products-table">
@@ -209,7 +210,7 @@ function th_bf_admin_page(){
                 </tr></thead>
                 <tbody id="th-bf-products-tbody">
                 <?php
-                // Use $saved_groups for initial values so cleared values persist
+                // Use $saved_groups for initial values, with actual defaults shown
                 foreach ($saved_groups as $key => $row) {
                     $show = isset($row['show']) ? $row['show'] : '0';
                     $promo = isset($row['promo']) ? esc_attr($row['promo']) : '';
@@ -217,14 +218,14 @@ function th_bf_admin_page(){
                     $sub = isset($row['sub']) ? esc_attr($row['sub']) : '';
                     $cta_text = isset($row['cta_text']) ? esc_attr($row['cta_text']) : '';
                     $cta_url = isset($row['cta_url']) ? esc_attr($row['cta_url']) : '';
-                    echo '<tr data-product-type="default">';
+                    echo '<tr data-product-type="default" data-product-key="'.esc_attr($key).'">';
                     echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[groups]['.esc_attr($key).'][show]" value="1" class="th-bf-auto-save" '. checked($show,'1',false).'></td>';
                     echo '<td><strong>'.esc_html($key).'</strong></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][promo]" value="'. $promo .'" placeholder="e.g., BF25SAVE" style="width:120px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][title]" value="'. $title .'" placeholder="e.g., Black Friday Deal" style="width:220px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][sub]" value="'. $sub .'" placeholder="e.g., Save big this season" style="width:260px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_text]" value="'. $cta_text .'" placeholder="e.g., Claim Deal" style="width:120px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_url]" value="'. $cta_url .'" placeholder="e.g., /deals" style="width:180px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][promo]" value="'. $promo .'" style="width:120px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][title]" value="'. $title .'" style="width:220px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][sub]" value="'. $sub .'" style="width:260px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_text]" value="'. $cta_text .'" style="width:120px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_url]" value="'. $cta_url .'" style="width:180px;" class="th-bf-auto-save"></td>';
                     echo '<td></td>';
                     echo '</tr>';
                 }
@@ -242,18 +243,22 @@ function th_bf_admin_page(){
 
                     echo '<tr data-product-type="custom">';
                     echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products]['.$idx.'][show]" value="1" class="th-bf-auto-save" '. checked($show,'1',false).'></td>';
-                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][key]" value="'. $key .'" placeholder="e.g., tld_uk" style="width:140px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][promo]" value="'. $promo .'" placeholder="e.g., BF25SAVE" style="width:120px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][title]" value="'. $title .'" placeholder="e.g., Black Friday Deal" style="width:220px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][sub]" value="'. $sub .'" placeholder="e.g., Save big this season" style="width:260px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][cta_text]" value="'. $cta_text .'" placeholder="e.g., Claim Deal" style="width:120px;" class="th-bf-auto-save"></td>';
-                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][cta_url]" value="'. $cta_url .'" placeholder="e.g., /deals" style="width:180px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][key]" value="'. $key .'" style="width:140px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][promo]" value="'. $promo .'" style="width:120px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][title]" value="'. $title .'" style="width:220px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][sub]" value="'. $sub .'" style="width:260px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][cta_text]" value="'. $cta_text .'" style="width:120px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][cta_url]" value="'. $cta_url .'" style="width:180px;" class="th-bf-auto-save"></td>';
                     echo '<td><button type="button" class="button button-small th-bf-delete-product" style="color:#a00;">Delete</button></td>';
                     echo '</tr>';
                 }
                 ?>
                 </tbody>
             </table>
+
+            <div style="margin-top:12px;">
+                <button type="button" class="button button-primary" id="th-bf-add-product">+ Add Custom Product</button>
+            </div>
 
             <?php submit_button('Save banner settings'); ?>
         </form>
@@ -485,9 +490,14 @@ function th_bf_admin_page(){
                 });
             });
 
+            // Default values for restoration
+            var defaults = <?php echo json_encode(th_bf_default_config()['groups']); ?>;
+
             // Bulk actions
             var enableAllBtn = document.getElementById('th-bf-enable-all');
             var disableAllBtn = document.getElementById('th-bf-disable-all');
+            var clearAllBtn = document.getElementById('th-bf-clear-all');
+            var restoreDefaultsBtn = document.getElementById('th-bf-restore-defaults');
             var addProductBtn = document.getElementById('th-bf-add-product');
 
             if (enableAllBtn) {
@@ -502,6 +512,41 @@ function th_bf_admin_page(){
                 disableAllBtn.addEventListener('click', function(){
                     var checkboxes = document.querySelectorAll('input[type="checkbox"][name^="th_bf_opts[groups]"][name$="[show]"], input[type="checkbox"][name^="th_bf_opts[custom_products]"][name$="[show]"]');
                     checkboxes.forEach(function(cb){ cb.checked = false; });
+                    autoSave();
+                });
+            }
+
+            if (clearAllBtn) {
+                clearAllBtn.addEventListener('click', function(){
+                    if (!confirm('Clear all product fields? This will remove all promo codes, titles, subtitles, and CTA text/URLs.')) {
+                        return;
+                    }
+                    document.querySelectorAll('tr[data-product-type="default"]').forEach(function(row){
+                        row.querySelectorAll('input[type="text"]').forEach(function(input){
+                            input.value = '';
+                        });
+                    });
+                    autoSave();
+                });
+            }
+
+            if (restoreDefaultsBtn) {
+                restoreDefaultsBtn.addEventListener('click', function(){
+                    if (!confirm('Restore all fields to default values? This will overwrite your current settings.')) {
+                        return;
+                    }
+                    document.querySelectorAll('tr[data-product-type="default"]').forEach(function(row){
+                        var productKey = row.getAttribute('data-product-key');
+                        if (defaults[productKey]) {
+                            var def = defaults[productKey];
+                            var inputs = row.querySelectorAll('input[type="text"]');
+                            if (inputs[0]) inputs[0].value = def.promo || '';
+                            if (inputs[1]) inputs[1].value = def.title || '';
+                            if (inputs[2]) inputs[2].value = def.sub || '';
+                            if (inputs[3]) inputs[3].value = def.cta_text || '';
+                            if (inputs[4]) inputs[4].value = def.cta_url || '';
+                        }
+                    });
                     autoSave();
                 });
             }
@@ -525,12 +570,12 @@ function th_bf_admin_page(){
 
                     tr.innerHTML =
                         '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products][' + idx + '][show]" value="1" class="th-bf-auto-save"></td>' +
-                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][key]" value="" placeholder="e.g., tld_uk" style="width:140px;" class="th-bf-auto-save"></td>' +
-                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][promo]" value="" placeholder="e.g., BF25SAVE" style="width:120px;" class="th-bf-auto-save"></td>' +
-                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][title]" value="" placeholder="e.g., Black Friday Deal" style="width:220px;" class="th-bf-auto-save"></td>' +
-                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][sub]" value="" placeholder="e.g., Save big this season" style="width:260px;" class="th-bf-auto-save"></td>' +
-                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_text]" value="" placeholder="e.g., Claim Deal" style="width:120px;" class="th-bf-auto-save"></td>' +
-                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_url]" value="" placeholder="e.g., /deals" style="width:180px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][key]" value="" style="width:140px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][promo]" value="" style="width:120px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][title]" value="" style="width:220px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][sub]" value="" style="width:260px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_text]" value="" style="width:120px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_url]" value="" style="width:180px;" class="th-bf-auto-save"></td>' +
                         '<td><button type="button" class="button button-small th-bf-delete-product" style="color:#a00;">Delete</button></td>';
 
                     tbody.appendChild(tr);
