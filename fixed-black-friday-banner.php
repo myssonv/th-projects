@@ -22,6 +22,16 @@ function th_bf_default_config() {
         'start' => '',
         'end' => '',
         'default_cta' => '/promos',
+        'show_on' => [
+            'homepage' => '1',
+            'archives' => '0',
+            'blog_page' => '0',
+            'single_posts' => '1',
+            'pages' => '0',
+            'all_pages' => '0'
+        ],
+        'exclude_urls' => '',
+        'custom_products' => [],
         'groups' => [
             // Domains
             'general_domains' => ['show'=>'0','promo'=>'','title'=>'','sub'=>'','cta_text'=>'','cta_url'=>''],
