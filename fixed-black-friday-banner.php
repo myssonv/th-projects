@@ -34,37 +34,37 @@ function th_bf_default_config() {
         'custom_products' => [],
         'groups' => [
             // Domains
-            'general_domains' => ['show'=>'0','promo'=>'BF2024','title'=>'Domain Sale','sub'=>'Register your perfect domain','cta_text'=>'Get Domain','cta_url'=>'/domains#content'],
-            'ke_domains' => ['show'=>'0','promo'=>'KENYA24','title'=>'.KE Domain Special','sub'=>'Get your .co.ke domain today','cta_text'=>'Register Now','cta_url'=>'/ke-domain#content'],
-            'domain_transfer' => ['show'=>'0','promo'=>'TRANSFER24','title'=>'Transfer Domain','sub'=>'Move your domain to us','cta_text'=>'Transfer Now','cta_url'=>'/domains#content'],
+            'general_domains' => ['show'=>'0','promo'=>'','title'=>'Domain Sale','sub'=>'Register your perfect domain','cta_text'=>'Get Domain','cta_url'=>'/domains#content'],
+            'ke_domains' => ['show'=>'0','promo'=>'BF25KEDOMAIN','title'=>'.KE Domain Special','sub'=>'Get your .co.ke domain today','cta_text'=>'Register Now','cta_url'=>'/ke-domain#content'],
+            'domain_transfer' => ['show'=>'0','promo'=>'','title'=>'Transfer Domain','sub'=>'Move your domain to us','cta_text'=>'Transfer Now','cta_url'=>'/domains#content'],
             'free_domains' => ['show'=>'0','promo'=>'','title'=>'Free Domain','sub'=>'Get a free domain with hosting','cta_text'=>'Claim Free Domain','cta_url'=>'/domains/free#content'],
             'whois' => ['show'=>'0','promo'=>'','title'=>'Domain Search','sub'=>'Find your perfect domain','cta_text'=>'Search Now','cta_url'=>'/domains/whois#content'],
             // TLDs
-            'tld_com' => ['show'=>'0','promo'=>'COM24','title'=>'.COM Domain Sale','sub'=>'Register .com domains','cta_text'=>'Get .COM','cta_url'=>'/domains/tlds/com#content'],
-            'tld_za' => ['show'=>'0','promo'=>'ZA24','title'=>'.ZA Domain Special','sub'=>'South African domains','cta_text'=>'Register .ZA','cta_url'=>'/domains/tlds/za#content'],
-            'tld_ng' => ['show'=>'0','promo'=>'NG24','title'=>'.NG Domain Sale','sub'=>'Nigerian domains','cta_text'=>'Get .NG','cta_url'=>'/domains/tlds/ng#content'],
-            'tld_us' => ['show'=>'0','promo'=>'US24','title'=>'.US Domain Special','sub'=>'American domains','cta_text'=>'Register .US','cta_url'=>'/domains/tlds/us#content'],
+            'tld_com' => ['show'=>'0','promo'=>'BF25COM','title'=>'.COM Domain Sale','sub'=>'Register .com domains','cta_text'=>'Get .COM','cta_url'=>'/domains/tlds/com#content'],
+            'tld_za' => ['show'=>'0','promo'=>'BF25ZADOMAIN','title'=>'.ZA Domain Special','sub'=>'South African domains','cta_text'=>'Register .ZA','cta_url'=>'/domains/tlds/za#content'],
+            'tld_ng' => ['show'=>'0','promo'=>'BF25NGDOMAIN','title'=>'.NG Domain Sale','sub'=>'Nigerian domains','cta_text'=>'Get .NG','cta_url'=>'/domains/tlds/ng#content'],
+            'tld_us' => ['show'=>'0','promo'=>'BF25USDOMAIN','title'=>'.US Domain Special','sub'=>'American domains','cta_text'=>'Register .US','cta_url'=>'/domains/tlds/us#content'],
             // Hosting
-            'general_hosting' => ['show'=>'0','promo'=>'HOST24','title'=>'Web Hosting Sale','sub'=>'Fast & reliable hosting','cta_text'=>'Get Hosting','cta_url'=>'/hosting#content'],
-            'cpanel_hosting' => ['show'=>'0','promo'=>'CPANEL24','title'=>'cPanel Hosting','sub'=>'Easy website management','cta_text'=>'Start Now','cta_url'=>'/hosting/cpanel#content'],
-            'cyberpanel_hosting' => ['show'=>'0','promo'=>'CYBER24','title'=>'CyberPanel Hosting','sub'=>'Lightning fast hosting','cta_text'=>'Get Started','cta_url'=>'/hosting/cyberpanel#content'],
-            'windows_hosting' => ['show'=>'0','promo'=>'WIN24','title'=>'Windows Hosting','sub'=>'ASP.NET hosting','cta_text'=>'Start Now','cta_url'=>'/hosting/windows#content'],
-            'reseller_hosting' => ['show'=>'0','promo'=>'RESELL24','title'=>'Reseller Hosting','sub'=>'Start your hosting business','cta_text'=>'Become Reseller','cta_url'=>'/hosting/reseller#content'],
+            'general_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Web Hosting Sale','sub'=>'Fast & reliable hosting','cta_text'=>'Get Hosting','cta_url'=>'/hosting#content'],
+            'cpanel_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'cPanel Hosting','sub'=>'Easy website management','cta_text'=>'Start Now','cta_url'=>'/hosting/cpanel#content'],
+            'cyberpanel_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'CyberPanel Hosting','sub'=>'Lightning fast hosting','cta_text'=>'Get Started','cta_url'=>'/hosting/cyberpanel#content'],
+            'windows_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Windows Hosting','sub'=>'ASP.NET hosting','cta_text'=>'Start Now','cta_url'=>'/hosting/windows#content'],
+            'reseller_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Reseller Hosting','sub'=>'Start your hosting business','cta_text'=>'Become Reseller','cta_url'=>'/hosting/reseller#content'],
             'free_hosting' => ['show'=>'0','promo'=>'','title'=>'Free Hosting','sub'=>'Try hosting for free','cta_text'=>'Get Free Hosting','cta_url'=>'/hosting/free#content'],
-            'dedicated_servers' => ['show'=>'0','promo'=>'SERVER24','title'=>'Dedicated Servers','sub'=>'Ultimate performance','cta_text'=>'View Servers','cta_url'=>'/hosting/dedicated-servers#content'],
+            'dedicated_servers' => ['show'=>'0','promo'=>'BF25VPS','title'=>'Dedicated Servers','sub'=>'Ultimate performance','cta_text'=>'View Servers','cta_url'=>'/hosting/dedicated-servers#content'],
             // Email, VPS, SSL, services
-            'email_hosting' => ['show'=>'0','promo'=>'EMAIL24','title'=>'Email Hosting','sub'=>'Professional email','cta_text'=>'Get Email','cta_url'=>'/hosting/email#content'],
-            'vps_hosting' => ['show'=>'0','promo'=>'VPS24','title'=>'VPS Hosting','sub'=>'Scalable cloud servers','cta_text'=>'Get VPS','cta_url'=>'/vps-hosting#content'],
-            'managed_vps' => ['show'=>'0','promo'=>'MVPS24','title'=>'Managed VPS','sub'=>'Fully managed servers','cta_text'=>'View Plans','cta_url'=>'/vps-hosting/managed#content'],
-            'ssl' => ['show'=>'0','promo'=>'SSL24','title'=>'SSL Certificates','sub'=>'Secure your website','cta_text'=>'Get SSL','cta_url'=>'/ssl#content'],
-            'ai_builder' => ['show'=>'0','promo'=>'AI24','title'=>'AI Website Builder','sub'=>'Build sites with AI','cta_text'=>'Try Now','cta_url'=>'/ai-website-builder#content'],
-            'online_store' => ['show'=>'0','promo'=>'STORE24','title'=>'Online Store','sub'=>'Start selling online','cta_text'=>'Create Store','cta_url'=>'/online-store#content'],
-            'local_seo' => ['show'=>'0','promo'=>'SEO24','title'=>'Local SEO','sub'=>'Get found locally','cta_text'=>'Get Started','cta_url'=>'/local-seo#content'],
+            'email_hosting' => ['show'=>'0','promo'=>'BF25EMAILS','title'=>'Email Hosting','sub'=>'Professional email','cta_text'=>'Get Email','cta_url'=>'/hosting/email#content'],
+            'vps_hosting' => ['show'=>'0','promo'=>'BF25VPS','title'=>'VPS Hosting','sub'=>'Scalable cloud servers','cta_text'=>'Get VPS','cta_url'=>'/vps-hosting#content'],
+            'managed_vps' => ['show'=>'0','promo'=>'BF25VPS','title'=>'Managed VPS','sub'=>'Fully managed servers','cta_text'=>'View Plans','cta_url'=>'/vps-hosting/managed#content'],
+            'ssl' => ['show'=>'0','promo'=>'BF25SSL','title'=>'SSL Certificates','sub'=>'Secure your website','cta_text'=>'Get SSL','cta_url'=>'/ssl#content'],
+            'ai_builder' => ['show'=>'0','promo'=>'BF25WEBSITES','title'=>'AI Website Builder','sub'=>'Build sites with AI','cta_text'=>'Try Now','cta_url'=>'/ai-website-builder#content'],
+            'online_store' => ['show'=>'0','promo'=>'BF25WEBSITES','title'=>'Online Store','sub'=>'Start selling online','cta_text'=>'Create Store','cta_url'=>'/online-store#content'],
+            'local_seo' => ['show'=>'0','promo'=>'BF25SEO','title'=>'Local SEO','sub'=>'Get found locally','cta_text'=>'Get Started','cta_url'=>'/local-seo#content'],
             // WHMCS
-            'whmcs_cart' => ['show'=>'0','promo'=>'CART24','title'=>'Shopping Cart','sub'=>'Complete your order','cta_text'=>'View Cart','cta_url'=>'/cloud/cart.php#content'],
-            'whmcs_store' => ['show'=>'0','promo'=>'SHOP24','title'=>'Our Store','sub'=>'Browse all products','cta_text'=>'Browse Store','cta_url'=>'/cloud/store#content'],
+            'whmcs_cart' => ['show'=>'0','promo'=>'','title'=>'Shopping Cart','sub'=>'Complete your order','cta_text'=>'View Cart','cta_url'=>'/cloud/cart.php#content'],
+            'whmcs_store' => ['show'=>'0','promo'=>'','title'=>'Our Store','sub'=>'Browse all products','cta_text'=>'Browse Store','cta_url'=>'/cloud/store#content'],
             // Blog combo
-            'blog_combo' => ['show'=>'0','promo'=>'COMBO24','title'=>'Hosting + Domain Deal','sub'=>'Complete website package','cta_text'=>'View Deals','cta_url'=>'/promos#content']
+            'blog_combo' => ['show'=>'0','promo'=>'','title'=>'Hosting + Domain Deal','sub'=>'Complete website package','cta_text'=>'View Deals','cta_url'=>'/promos#content']
         ]
     ];
 }
