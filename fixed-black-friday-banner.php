@@ -17,10 +17,14 @@ if (!defined('ABSPATH')) exit;
    HELPERS: defaults & groups
    ------------------------ */
 function th_bf_default_config() {
+    // Set default start date to now and end date to 5 days from now
+    $start_date = date('Y-m-d\TH:i');
+    $end_date = date('Y-m-d\TH:i', strtotime('+5 days'));
+
     return [
         'enable' => '1',
-        'start' => '',
-        'end' => '',
+        'start' => $start_date,
+        'end' => $end_date,
         'default_cta' => '/promos',
         'show_on' => [
             'homepage' => '1',
@@ -34,37 +38,37 @@ function th_bf_default_config() {
         'custom_products' => [],
         'groups' => [
             // Domains
-            'general_domains' => ['show'=>'0','promo'=>'','title'=>'Domain Sale','sub'=>'Register your perfect domain','cta_text'=>'Get Domain','cta_url'=>'/domains#content'],
-            'ke_domains' => ['show'=>'0','promo'=>'BF25KEDOMAIN','title'=>'.KE Domain Special','sub'=>'Get your .co.ke domain today','cta_text'=>'Register Now','cta_url'=>'/ke-domain#content'],
-            'domain_transfer' => ['show'=>'0','promo'=>'','title'=>'Transfer Domain','sub'=>'Move your domain to us','cta_text'=>'Transfer Now','cta_url'=>'/domains#content'],
-            'free_domains' => ['show'=>'0','promo'=>'','title'=>'Free Domain','sub'=>'Get a free domain with hosting','cta_text'=>'Claim Free Domain','cta_url'=>'/domains/free#content'],
-            'whois' => ['show'=>'0','promo'=>'','title'=>'Domain Search','sub'=>'Find your perfect domain','cta_text'=>'Search Now','cta_url'=>'/domains/whois#content'],
+            'general_domains' => ['show'=>'0','promo'=>'','title'=>'Domain Sale','sub'=>'Register your perfect domain','cta_text'=>'Get Domain','cta_url'=>'/domains/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'ke_domains' => ['show'=>'0','promo'=>'BF25KEDOMAIN','title'=>'.KE Domain Special','sub'=>'Get your .co.ke domain today','cta_text'=>'Register Now','cta_url'=>'/ke-domain/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'domain_transfer' => ['show'=>'0','promo'=>'','title'=>'Transfer Domain','sub'=>'Move your domain to us','cta_text'=>'Transfer Now','cta_url'=>'/domains/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'free_domains' => ['show'=>'0','promo'=>'','title'=>'Free Domain','sub'=>'Get a free domain with hosting','cta_text'=>'Claim Free Domain','cta_url'=>'/domains/free/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'whois' => ['show'=>'0','promo'=>'','title'=>'Domain Search','sub'=>'Find your perfect domain','cta_text'=>'Search Now','cta_url'=>'/domains/whois/#content','priority'=>10,'hide_on_cta_page'=>'1'],
             // TLDs
-            'tld_com' => ['show'=>'0','promo'=>'BF25COM','title'=>'.COM Domain Sale','sub'=>'Register .com domains','cta_text'=>'Get .COM','cta_url'=>'/domains/tlds/com#content'],
-            'tld_za' => ['show'=>'0','promo'=>'BF25ZADOMAIN','title'=>'.ZA Domain Special','sub'=>'South African domains','cta_text'=>'Register .ZA','cta_url'=>'/domains/tlds/za#content'],
-            'tld_ng' => ['show'=>'0','promo'=>'BF25NGDOMAIN','title'=>'.NG Domain Sale','sub'=>'Nigerian domains','cta_text'=>'Get .NG','cta_url'=>'/domains/tlds/ng#content'],
-            'tld_us' => ['show'=>'0','promo'=>'BF25USDOMAIN','title'=>'.US Domain Special','sub'=>'American domains','cta_text'=>'Register .US','cta_url'=>'/domains/tlds/us#content'],
+            'tld_com' => ['show'=>'0','promo'=>'BF25COM','title'=>'.COM Domain Sale','sub'=>'Register .com domains','cta_text'=>'Get .COM','cta_url'=>'/domains/tlds/com/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'tld_za' => ['show'=>'0','promo'=>'BF25ZADOMAIN','title'=>'.ZA Domain Special','sub'=>'South African domains','cta_text'=>'Register .ZA','cta_url'=>'/domains/tlds/za/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'tld_ng' => ['show'=>'0','promo'=>'BF25NGDOMAIN','title'=>'.NG Domain Sale','sub'=>'Nigerian domains','cta_text'=>'Get .NG','cta_url'=>'/domains/tlds/ng/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'tld_us' => ['show'=>'0','promo'=>'BF25USDOMAIN','title'=>'.US Domain Special','sub'=>'American domains','cta_text'=>'Register .US','cta_url'=>'/domains/tlds/us/#content','priority'=>10,'hide_on_cta_page'=>'1'],
             // Hosting
-            'general_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Web Hosting Sale','sub'=>'Fast & reliable hosting','cta_text'=>'Get Hosting','cta_url'=>'/hosting#content'],
-            'cpanel_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'cPanel Hosting','sub'=>'Easy website management','cta_text'=>'Start Now','cta_url'=>'/hosting/cpanel#content'],
-            'cyberpanel_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'CyberPanel Hosting','sub'=>'Lightning fast hosting','cta_text'=>'Get Started','cta_url'=>'/hosting/cyberpanel#content'],
-            'windows_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Windows Hosting','sub'=>'ASP.NET hosting','cta_text'=>'Start Now','cta_url'=>'/hosting/windows#content'],
-            'reseller_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Reseller Hosting','sub'=>'Start your hosting business','cta_text'=>'Become Reseller','cta_url'=>'/hosting/reseller#content'],
-            'free_hosting' => ['show'=>'0','promo'=>'','title'=>'Free Hosting','sub'=>'Try hosting for free','cta_text'=>'Get Free Hosting','cta_url'=>'/hosting/free#content'],
-            'dedicated_servers' => ['show'=>'0','promo'=>'BF25VPS','title'=>'Dedicated Servers','sub'=>'Ultimate performance','cta_text'=>'View Servers','cta_url'=>'/hosting/dedicated-servers#content'],
+            'general_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Web Hosting Sale','sub'=>'Fast & reliable hosting','cta_text'=>'Get Hosting','cta_url'=>'/hosting/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'cpanel_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'cPanel Hosting','sub'=>'Easy website management','cta_text'=>'Start Now','cta_url'=>'/hosting/cpanel/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'cyberpanel_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'CyberPanel Hosting','sub'=>'Lightning fast hosting','cta_text'=>'Get Started','cta_url'=>'/hosting/cyberpanel/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'windows_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Windows Hosting','sub'=>'ASP.NET hosting','cta_text'=>'Start Now','cta_url'=>'/hosting/windows/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'reseller_hosting' => ['show'=>'0','promo'=>'BF25HOSTING','title'=>'Reseller Hosting','sub'=>'Start your hosting business','cta_text'=>'Become Reseller','cta_url'=>'/hosting/reseller/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'free_hosting' => ['show'=>'0','promo'=>'','title'=>'Free Hosting','sub'=>'Try hosting for free','cta_text'=>'Get Free Hosting','cta_url'=>'/hosting/free/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'dedicated_servers' => ['show'=>'0','promo'=>'BF25VPS','title'=>'Dedicated Servers','sub'=>'Ultimate performance','cta_text'=>'View Servers','cta_url'=>'/hosting/dedicated-servers/#content','priority'=>10,'hide_on_cta_page'=>'1'],
             // Email, VPS, SSL, services
-            'email_hosting' => ['show'=>'0','promo'=>'BF25EMAILS','title'=>'Email Hosting','sub'=>'Professional email','cta_text'=>'Get Email','cta_url'=>'/hosting/email#content'],
-            'vps_hosting' => ['show'=>'0','promo'=>'BF25VPS','title'=>'VPS Hosting','sub'=>'Scalable cloud servers','cta_text'=>'Get VPS','cta_url'=>'/vps-hosting#content'],
-            'managed_vps' => ['show'=>'0','promo'=>'BF25VPS','title'=>'Managed VPS','sub'=>'Fully managed servers','cta_text'=>'View Plans','cta_url'=>'/vps-hosting/managed#content'],
-            'ssl' => ['show'=>'0','promo'=>'BF25SSL','title'=>'SSL Certificates','sub'=>'Secure your website','cta_text'=>'Get SSL','cta_url'=>'/ssl#content'],
-            'ai_builder' => ['show'=>'0','promo'=>'BF25WEBSITES','title'=>'AI Website Builder','sub'=>'Build sites with AI','cta_text'=>'Try Now','cta_url'=>'/ai-website-builder#content'],
-            'online_store' => ['show'=>'0','promo'=>'BF25WEBSITES','title'=>'Online Store','sub'=>'Start selling online','cta_text'=>'Create Store','cta_url'=>'/online-store#content'],
-            'local_seo' => ['show'=>'0','promo'=>'BF25SEO','title'=>'Local SEO','sub'=>'Get found locally','cta_text'=>'Get Started','cta_url'=>'/local-seo#content'],
+            'email_hosting' => ['show'=>'0','promo'=>'BF25EMAILS','title'=>'Email Hosting','sub'=>'Professional email','cta_text'=>'Get Email','cta_url'=>'/hosting/email/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'vps_hosting' => ['show'=>'0','promo'=>'BF25VPS','title'=>'VPS Hosting','sub'=>'Scalable cloud servers','cta_text'=>'Get VPS','cta_url'=>'/vps-hosting/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'managed_vps' => ['show'=>'0','promo'=>'BF25VPS','title'=>'Managed VPS','sub'=>'Fully managed servers','cta_text'=>'View Plans','cta_url'=>'/vps-hosting/managed/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'ssl' => ['show'=>'0','promo'=>'BF25SSL','title'=>'SSL Certificates','sub'=>'Secure your website','cta_text'=>'Get SSL','cta_url'=>'/ssl/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'ai_builder' => ['show'=>'0','promo'=>'BF25WEBSITES','title'=>'AI Website Builder','sub'=>'Build sites with AI','cta_text'=>'Try Now','cta_url'=>'/ai-website-builder/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'online_store' => ['show'=>'0','promo'=>'BF25WEBSITES','title'=>'Online Store','sub'=>'Start selling online','cta_text'=>'Create Store','cta_url'=>'/online-store/#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'local_seo' => ['show'=>'0','promo'=>'BF25SEO','title'=>'Local SEO','sub'=>'Get found locally','cta_text'=>'Get Started','cta_url'=>'/local-seo/#content','priority'=>10,'hide_on_cta_page'=>'1'],
             // WHMCS
-            'whmcs_cart' => ['show'=>'0','promo'=>'','title'=>'Shopping Cart','sub'=>'Complete your order','cta_text'=>'View Cart','cta_url'=>'/cloud/cart.php#content'],
-            'whmcs_store' => ['show'=>'0','promo'=>'','title'=>'Our Store','sub'=>'Browse all products','cta_text'=>'Browse Store','cta_url'=>'/cloud/store#content'],
+            'whmcs_cart' => ['show'=>'0','promo'=>'','title'=>'Shopping Cart','sub'=>'Complete your order','cta_text'=>'View Cart','cta_url'=>'/cloud/cart.php#content','priority'=>10,'hide_on_cta_page'=>'1'],
+            'whmcs_store' => ['show'=>'0','promo'=>'','title'=>'Our Store','sub'=>'Browse all products','cta_text'=>'Browse Store','cta_url'=>'/cloud/store/#content','priority'=>10,'hide_on_cta_page'=>'1'],
             // Blog combo
-            'blog_combo' => ['show'=>'0','promo'=>'','title'=>'Hosting + Domain Deal','sub'=>'Complete website package','cta_text'=>'View Deals','cta_url'=>'/promos#content']
+            'blog_combo' => ['show'=>'0','promo'=>'','title'=>'Hosting + Domain Deal','sub'=>'Complete website package','cta_text'=>'View Deals','cta_url'=>'/promos/#content','priority'=>5,'hide_on_cta_page'=>'1']
         ]
     ];
 }
@@ -206,6 +210,8 @@ function th_bf_admin_page(){
                     <th>Subtitle</th>
                     <th>CTA text</th>
                     <th>CTA URL</th>
+                    <th style="width:60px;">Priority</th>
+                    <th style="width:60px;">Hide on CTA</th>
                     <th style="width:50px;">Action</th>
                 </tr></thead>
                 <tbody id="th-bf-products-tbody">
@@ -218,6 +224,8 @@ function th_bf_admin_page(){
                     $sub = isset($row['sub']) ? esc_attr($row['sub']) : '';
                     $cta_text = isset($row['cta_text']) ? esc_attr($row['cta_text']) : '';
                     $cta_url = isset($row['cta_url']) ? esc_attr($row['cta_url']) : '';
+                    $priority = isset($row['priority']) ? esc_attr($row['priority']) : '10';
+                    $hide_on_cta = isset($row['hide_on_cta_page']) ? $row['hide_on_cta_page'] : '1';
                     echo '<tr data-product-type="default" data-product-key="'.esc_attr($key).'">';
                     echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[groups]['.esc_attr($key).'][show]" value="1" class="th-bf-auto-save" '. checked($show,'1',false).'></td>';
                     echo '<td><strong>'.esc_html($key).'</strong></td>';
@@ -226,6 +234,8 @@ function th_bf_admin_page(){
                     echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][sub]" value="'. $sub .'" style="width:260px;" class="th-bf-auto-save"></td>';
                     echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_text]" value="'. $cta_text .'" style="width:120px;" class="th-bf-auto-save"></td>';
                     echo '<td><input type="text" name="th_bf_opts[groups]['.esc_attr($key).'][cta_url]" value="'. $cta_url .'" style="width:180px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="number" name="th_bf_opts[groups]['.esc_attr($key).'][priority]" value="'. $priority .'" min="1" max="100" style="width:50px;" class="th-bf-auto-save"></td>';
+                    echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[groups]['.esc_attr($key).'][hide_on_cta_page]" value="1" class="th-bf-auto-save" '. checked($hide_on_cta,'1',false).'></td>';
                     echo '<td></td>';
                     echo '</tr>';
                 }
@@ -240,6 +250,8 @@ function th_bf_admin_page(){
                     $sub = isset($custom['sub']) ? esc_attr($custom['sub']) : '';
                     $cta_text = isset($custom['cta_text']) ? esc_attr($custom['cta_text']) : '';
                     $cta_url = isset($custom['cta_url']) ? esc_attr($custom['cta_url']) : '';
+                    $priority = isset($custom['priority']) ? esc_attr($custom['priority']) : '10';
+                    $hide_on_cta = isset($custom['hide_on_cta_page']) ? $custom['hide_on_cta_page'] : '1';
 
                     echo '<tr data-product-type="custom">';
                     echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products]['.$idx.'][show]" value="1" class="th-bf-auto-save" '. checked($show,'1',false).'></td>';
@@ -249,6 +261,8 @@ function th_bf_admin_page(){
                     echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][sub]" value="'. $sub .'" style="width:260px;" class="th-bf-auto-save"></td>';
                     echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][cta_text]" value="'. $cta_text .'" style="width:120px;" class="th-bf-auto-save"></td>';
                     echo '<td><input type="text" name="th_bf_opts[custom_products]['.$idx.'][cta_url]" value="'. $cta_url .'" style="width:180px;" class="th-bf-auto-save"></td>';
+                    echo '<td><input type="number" name="th_bf_opts[custom_products]['.$idx.'][priority]" value="'. $priority .'" min="1" max="100" style="width:50px;" class="th-bf-auto-save"></td>';
+                    echo '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products]['.$idx.'][hide_on_cta_page]" value="1" class="th-bf-auto-save" '. checked($hide_on_cta,'1',false).'></td>';
                     echo '<td><button type="button" class="button button-small th-bf-delete-product" style="color:#a00;">Delete</button></td>';
                     echo '</tr>';
                 }
@@ -539,12 +553,19 @@ function th_bf_admin_page(){
                         var productKey = row.getAttribute('data-product-key');
                         if (defaults[productKey]) {
                             var def = defaults[productKey];
-                            var inputs = row.querySelectorAll('input[type="text"]');
+                            var inputs = row.querySelectorAll('input[type="text"], input[type="number"]');
+                            var checkboxes = row.querySelectorAll('input[type="checkbox"]');
+
+                            // Text inputs: promo, title, sub, cta_text, cta_url
                             if (inputs[0]) inputs[0].value = def.promo || '';
                             if (inputs[1]) inputs[1].value = def.title || '';
                             if (inputs[2]) inputs[2].value = def.sub || '';
                             if (inputs[3]) inputs[3].value = def.cta_text || '';
                             if (inputs[4]) inputs[4].value = def.cta_url || '';
+                            if (inputs[5]) inputs[5].value = def.priority || '10';
+
+                            // Checkboxes: second one is hide_on_cta_page
+                            if (checkboxes[1]) checkboxes[1].checked = def.hide_on_cta_page == '1';
                         }
                     });
                     autoSave();
@@ -576,6 +597,8 @@ function th_bf_admin_page(){
                         '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][sub]" value="" style="width:260px;" class="th-bf-auto-save"></td>' +
                         '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_text]" value="" style="width:120px;" class="th-bf-auto-save"></td>' +
                         '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_url]" value="" style="width:180px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="number" name="th_bf_opts[custom_products][' + idx + '][priority]" value="10" min="1" max="100" style="width:50px;" class="th-bf-auto-save"></td>' +
+                        '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products][' + idx + '][hide_on_cta_page]" value="1" checked class="th-bf-auto-save"></td>' +
                         '<td><button type="button" class="button button-small th-bf-delete-product" style="color:#a00;">Delete</button></td>';
 
                     tbody.appendChild(tr);
@@ -660,7 +683,9 @@ function th_bf_sanitize($input) {
             'title' => isset($in['title']) ? sanitize_text_field($in['title']) : '',
             'sub' => isset($in['sub']) ? sanitize_text_field($in['sub']) : '',
             'cta_text' => isset($in['cta_text']) ? sanitize_text_field($in['cta_text']) : '',
-            'cta_url' => isset($in['cta_url']) ? esc_url_raw($in['cta_url']) : ''
+            'cta_url' => isset($in['cta_url']) ? esc_url_raw($in['cta_url']) : '',
+            'priority' => isset($in['priority']) ? intval($in['priority']) : 10,
+            'hide_on_cta_page' => isset($in['hide_on_cta_page']) && $in['hide_on_cta_page'] == '1' ? '1' : '0'
         ];
     }
 
@@ -680,7 +705,9 @@ function th_bf_sanitize($input) {
                 'title' => isset($custom['title']) ? sanitize_text_field($custom['title']) : '',
                 'sub' => isset($custom['sub']) ? sanitize_text_field($custom['sub']) : '',
                 'cta_text' => isset($custom['cta_text']) ? sanitize_text_field($custom['cta_text']) : '',
-                'cta_url' => isset($custom['cta_url']) ? esc_url_raw($custom['cta_url']) : ''
+                'cta_url' => isset($custom['cta_url']) ? esc_url_raw($custom['cta_url']) : '',
+                'priority' => isset($custom['priority']) ? intval($custom['priority']) : 10,
+                'hide_on_cta_page' => isset($custom['hide_on_cta_page']) && $custom['hide_on_cta_page'] == '1' ? '1' : '0'
             ];
         }
     }
@@ -873,10 +900,31 @@ add_action('wp_footer', function(){
 
     $uri = $_SERVER['REQUEST_URI'];
 
+    // Helper function to check if current URI matches CTA URL
+    $current_path = parse_url($uri, PHP_URL_PATH);
+    function th_bf_matches_cta($current_uri, $cta_url) {
+        if (empty($cta_url)) return false;
+        $cta_path = parse_url($cta_url, PHP_URL_PATH);
+        if (empty($cta_path)) return false;
+        // Remove #content and trailing slashes for comparison
+        $current_clean = rtrim(str_replace('#content', '', $current_uri), '/');
+        $cta_clean = rtrim(str_replace('#content', '', $cta_path), '/');
+        return $current_clean === $cta_clean;
+    }
+
     // If single blog post -> use blog_combo group if enabled
     if (is_singular('post')) {
         $group_key = 'blog_combo';
         $group = isset($opts['groups'][$group_key]) ? $opts['groups'][$group_key] : $defaults['groups'][$group_key];
+
+        // Check if we should hide banner on CTA page
+        if (isset($group['hide_on_cta_page']) && $group['hide_on_cta_page'] === '1') {
+            $cta_url = isset($group['cta_url']) && $group['cta_url'] !== '' ? $group['cta_url'] : $opts['default_cta'];
+            if (th_bf_matches_cta($current_path, $cta_url)) {
+                return; // User is already on the CTA page, no need to show banner
+            }
+        }
+
         // Only render if show enabled
         if (isset($group['show']) && $group['show'] === '1') {
             // output template for blog
@@ -898,58 +946,101 @@ add_action('wp_footer', function(){
         }
     }
 
-    // find matching group based on URI patterns
-    $found = false;
-    $is_custom = false;
+    // Collect all matching products with their priorities
+    $matching_products = [];
 
+    // Check default products
     foreach ($map as $key => $patterns) {
         foreach ($patterns as $p) {
             if (strpos($uri, $p) !== false) {
-                $found = $key;
-                break 2;
-            }
-        }
-    }
+                $group = isset($opts['groups'][$key]) ? $opts['groups'][$key] : (isset($defaults['groups'][$key]) ? $defaults['groups'][$key] : null);
+                if ($group && isset($group['show']) && $group['show'] === '1') {
+                    // Check if we should hide on CTA page
+                    if (isset($group['hide_on_cta_page']) && $group['hide_on_cta_page'] === '1') {
+                        $cta_url = isset($group['cta_url']) && $group['cta_url'] !== '' ? $group['cta_url'] : $opts['default_cta'];
+                        if (th_bf_matches_cta($current_path, $cta_url)) {
+                            continue; // Skip this product, user is on the CTA page
+                        }
+                    }
 
-    // Check custom products if no default match found
-    if (!$found) {
-        $custom_products = isset($opts['custom_products']) ? $opts['custom_products'] : [];
-        foreach ($custom_products as $custom) {
-            $custom_key = isset($custom['key']) ? $custom['key'] : '';
-            if (!empty($custom_key) && strpos($uri, '/' . $custom_key) !== false) {
-                $found = $custom_key;
-                $is_custom = true;
-                $group = $custom;
+                    $priority = isset($group['priority']) ? intval($group['priority']) : 10;
+                    $matching_products[] = [
+                        'key' => $key,
+                        'group' => $group,
+                        'priority' => $priority,
+                        'is_custom' => false
+                    ];
+                }
                 break;
             }
         }
     }
 
-    if (!$found && !$should_show) return;
+    // Check custom products
+    $custom_products = isset($opts['custom_products']) ? $opts['custom_products'] : [];
+    foreach ($custom_products as $custom) {
+        $custom_key = isset($custom['key']) ? $custom['key'] : '';
+        if (!empty($custom_key) && strpos($uri, '/' . $custom_key) !== false) {
+            if (isset($custom['show']) && $custom['show'] === '1') {
+                // Check if we should hide on CTA page
+                if (isset($custom['hide_on_cta_page']) && $custom['hide_on_cta_page'] === '1') {
+                    $cta_url = isset($custom['cta_url']) && $custom['cta_url'] !== '' ? $custom['cta_url'] : $opts['default_cta'];
+                    if (th_bf_matches_cta($current_path, $cta_url)) {
+                        continue; // Skip this product, user is on the CTA page
+                    }
+                }
 
-    if (!$is_custom && $found) {
-        $group_key = $found;
-        // use exact saved group if exists; otherwise fallback to default row (but don't write it)
-        $group = isset($opts['groups'][$group_key]) ? $opts['groups'][$group_key] : (isset($defaults['groups'][$group_key]) ? $defaults['groups'][$group_key] : null);
-        if (!$group) return;
-        // Only render if show checkbox is enabled for this group
-        if (!isset($group['show']) || $group['show'] !== '1') return;
-    } elseif ($is_custom) {
-        $group_key = $found;
-        // Only render if show checkbox is enabled for custom product
-        if (!isset($group['show']) || $group['show'] !== '1') return;
-    } elseif ($should_show && !$found) {
-        // If should_show is true but no specific product matched, use blog_combo for general pages
+                $priority = isset($custom['priority']) ? intval($custom['priority']) : 10;
+                $matching_products[] = [
+                    'key' => $custom_key,
+                    'group' => $custom,
+                    'priority' => $priority,
+                    'is_custom' => true
+                ];
+            }
+        }
+    }
+
+    // If no matches but should_show is true, use blog_combo
+    if (empty($matching_products) && $should_show) {
         $group_key = 'blog_combo';
         $group = isset($opts['groups'][$group_key]) ? $opts['groups'][$group_key] : (isset($defaults['groups'][$group_key]) ? $defaults['groups'][$group_key] : null);
 
-        // Only show if blog_combo is enabled
-        if (!$group || !isset($group['show']) || $group['show'] !== '1') {
-            return;
+        if ($group && isset($group['show']) && $group['show'] === '1') {
+            // Check if we should hide on CTA page
+            if (isset($group['hide_on_cta_page']) && $group['hide_on_cta_page'] === '1') {
+                $cta_url = isset($group['cta_url']) && $group['cta_url'] !== '' ? $group['cta_url'] : $opts['default_cta'];
+                if (!th_bf_matches_cta($current_path, $cta_url)) {
+                    $matching_products[] = [
+                        'key' => $group_key,
+                        'group' => $group,
+                        'priority' => isset($group['priority']) ? intval($group['priority']) : 5,
+                        'is_custom' => false
+                    ];
+                }
+            } else {
+                $matching_products[] = [
+                    'key' => $group_key,
+                    'group' => $group,
+                    'priority' => isset($group['priority']) ? intval($group['priority']) : 5,
+                    'is_custom' => false
+                ];
+            }
         }
-    } else {
-        return;
     }
+
+    // No matching products, exit
+    if (empty($matching_products)) return;
+
+    // Sort by priority (lower number = higher priority)
+    usort($matching_products, function($a, $b) {
+        return $a['priority'] - $b['priority'];
+    });
+
+    // Use the highest priority product (first in sorted array)
+    $selected = $matching_products[0];
+    $group_key = $selected['key'];
+    $group = $selected['group'];
 
     $title = isset($group['title']) ? $group['title'] : '';
     $subtitle = isset($group['sub']) ? $group['sub'] : '';
