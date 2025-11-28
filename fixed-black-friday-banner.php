@@ -508,39 +508,50 @@ function th_bf_admin_page(){
 
             // Add custom product
             if (addProductBtn) {
-                addProductBtn.addEventListener('click', function(){
-                var tbody = document.getElementById('th-bf-products-tbody');
-                var tr = document.createElement('tr');
-                tr.setAttribute('data-product-type', 'custom');
+                addProductBtn.addEventListener('click', function(e){
+                    e.preventDefault();
+                    console.log('Add Custom Product clicked');
 
-                var idx = customProductIndex++;
-
-                tr.innerHTML =
-                    '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products][' + idx + '][show]" value="1" class="th-bf-auto-save"></td>' +
-                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][key]" value="" placeholder="e.g., tld_uk" style="width:140px;" class="th-bf-auto-save"></td>' +
-                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][promo]" value="" placeholder="e.g., BF25SAVE" style="width:120px;" class="th-bf-auto-save"></td>' +
-                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][title]" value="" placeholder="e.g., Black Friday Deal" style="width:220px;" class="th-bf-auto-save"></td>' +
-                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][sub]" value="" placeholder="e.g., Save big this season" style="width:260px;" class="th-bf-auto-save"></td>' +
-                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_text]" value="" placeholder="e.g., Claim Deal" style="width:120px;" class="th-bf-auto-save"></td>' +
-                    '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_url]" value="" placeholder="e.g., /deals" style="width:180px;" class="th-bf-auto-save"></td>' +
-                    '<td><button type="button" class="button button-small th-bf-delete-product" style="color:#a00;">Delete</button></td>';
-
-                tbody.appendChild(tr);
-
-                // Attach auto-save listeners to new inputs
-                tr.querySelectorAll('.th-bf-auto-save').forEach(function(input){
-                    input.addEventListener('input', autoSave);
-                    input.addEventListener('change', autoSave);
-                });
-
-                // Attach delete handler
-                tr.querySelector('.th-bf-delete-product').addEventListener('click', function(){
-                    if (confirm('Delete this custom product?')) {
-                        tr.remove();
-                        autoSave();
+                    var tbody = document.getElementById('th-bf-products-tbody');
+                    if (!tbody) {
+                        console.error('tbody not found');
+                        return;
                     }
+
+                    var tr = document.createElement('tr');
+                    tr.setAttribute('data-product-type', 'custom');
+
+                    var idx = customProductIndex++;
+
+                    tr.innerHTML =
+                        '<td style="text-align:center;"><input type="checkbox" name="th_bf_opts[custom_products][' + idx + '][show]" value="1" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][key]" value="" placeholder="e.g., tld_uk" style="width:140px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][promo]" value="" placeholder="e.g., BF25SAVE" style="width:120px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][title]" value="" placeholder="e.g., Black Friday Deal" style="width:220px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][sub]" value="" placeholder="e.g., Save big this season" style="width:260px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_text]" value="" placeholder="e.g., Claim Deal" style="width:120px;" class="th-bf-auto-save"></td>' +
+                        '<td><input type="text" name="th_bf_opts[custom_products][' + idx + '][cta_url]" value="" placeholder="e.g., /deals" style="width:180px;" class="th-bf-auto-save"></td>' +
+                        '<td><button type="button" class="button button-small th-bf-delete-product" style="color:#a00;">Delete</button></td>';
+
+                    tbody.appendChild(tr);
+                    console.log('Row added to table');
+
+                    // Attach auto-save listeners to new inputs
+                    tr.querySelectorAll('.th-bf-auto-save').forEach(function(input){
+                        input.addEventListener('input', autoSave);
+                        input.addEventListener('change', autoSave);
+                    });
+
+                    // Attach delete handler
+                    tr.querySelector('.th-bf-delete-product').addEventListener('click', function(){
+                        if (confirm('Delete this custom product?')) {
+                            tr.remove();
+                            autoSave();
+                        }
+                    });
                 });
-                });
+            } else {
+                console.error('Add Product button not found! Button ID: th-bf-add-product');
             }
 
             // Delete custom product (for existing rows)
@@ -883,33 +894,14 @@ add_action('wp_footer', function(){
         // Only render if show checkbox is enabled for custom product
         if (!isset($group['show']) || $group['show'] !== '1') return;
     } elseif ($should_show && !$found) {
-        // If should_show is true but no specific product matched, use first enabled product as fallback
-        $group_key = null;
-        $group = null;
+        // If should_show is true but no specific product matched, use blog_combo for general pages
+        $group_key = 'blog_combo';
+        $group = isset($opts['groups'][$group_key]) ? $opts['groups'][$group_key] : (isset($defaults['groups'][$group_key]) ? $defaults['groups'][$group_key] : null);
 
-        // Find first enabled product from groups
-        foreach ($opts['groups'] as $key => $prod) {
-            if (isset($prod['show']) && $prod['show'] === '1' && !empty($prod['title'])) {
-                $group_key = $key;
-                $group = $prod;
-                break;
-            }
+        // Only show if blog_combo is enabled
+        if (!$group || !isset($group['show']) || $group['show'] !== '1') {
+            return;
         }
-
-        // If no enabled group found, try custom products
-        if (!$group) {
-            $custom_products = isset($opts['custom_products']) ? $opts['custom_products'] : [];
-            foreach ($custom_products as $custom) {
-                if (isset($custom['show']) && $custom['show'] === '1' && !empty($custom['title'])) {
-                    $group_key = isset($custom['key']) ? $custom['key'] : 'custom_banner';
-                    $group = $custom;
-                    break;
-                }
-            }
-        }
-
-        // If still no group found, don't render
-        if (!$group || !$group_key) return;
     } else {
         return;
     }
