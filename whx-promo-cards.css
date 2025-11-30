@@ -1,9 +1,9 @@
 /**
- * WHX PROMO CARDS - INDUSTRY STANDARD COLORS
- * Version: 9.6 SPACESHIP STYLE - Single Input Domain Search
- * 
- * Compatible with v9.6 Functions
- * Copy this entire file to your WordPress Additional CSS or theme stylesheet
+ * WHX PROMO CARDS - PROFESSIONAL STYLING
+ * Version: 9.9.9
+ *
+ * Modern, responsive promo card styling with category-based colors
+ * Copy this to WordPress Additional CSS or theme stylesheet
  */
 
 /* Notice Styles */
@@ -16,6 +16,100 @@
 .whx-promo-archive{
     margin:2rem 0;
     padding:0 20px;
+}
+
+/* Filter Tabs - Oval Design */
+.whx-filter-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.65rem;
+    margin-bottom:2.5rem; /* More spacing below tabs */
+    padding:0 0 1rem; /* Extra padding at bottom */
+    justify-content:center;
+}
+
+.whx-filter-tab{
+    display:inline-flex;
+    align-items:center;
+    gap:0.4rem;
+    padding:0.5rem 1.1rem;
+    font-size:0.875rem;
+    font-weight:500;
+    color:#64748b;
+    background:transparent; /* No background */
+    border:1.5px solid transparent;
+    border-radius:50px; /* Oval/pill shape */
+    cursor:pointer;
+    transition:all 0.25s ease;
+    white-space:nowrap;
+    position:relative;
+    background-clip:padding-box; /* For gradient border effect */
+}
+
+/* Gradient border for inactive tabs */
+.whx-filter-tab::before{
+    content:'';
+    position:absolute;
+    top:0; right:0; bottom:0; left:0;
+    z-index:-1;
+    margin:-1.5px; /* Match border width */
+    border-radius:inherit;
+    background:linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    opacity:0.6;
+}
+
+.whx-filter-tab:hover{
+    color:#475569;
+    transform:translateY(-1px);
+}
+
+.whx-filter-tab:hover::before{
+    opacity:1;
+    background:linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+}
+
+/* Active tab with gradient background */
+.whx-filter-tab--active{
+    color:#fff;
+    background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);
+    border-color:transparent;
+    box-shadow:0 2px 8px rgba(37,99,235,0.25);
+}
+
+.whx-filter-tab--active::before{
+    display:none; /* Remove gradient border for active */
+}
+
+.whx-filter-tab--active:hover{
+    background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);
+    box-shadow:0 3px 12px rgba(37,99,235,0.35);
+    transform:translateY(-1px);
+}
+
+.whx-filter-tab svg{
+    flex-shrink:0;
+    width:14px;
+    height:14px;
+}
+
+/* Mobile responsiveness for filter tabs */
+@media (max-width:640px){
+    .whx-filter-tabs{
+        gap:0.5rem;
+        margin-bottom:2rem;
+        padding:0 0 0.75rem;
+    }
+
+    .whx-filter-tab{
+        padding:0.45rem 0.95rem;
+        font-size:0.8125rem;
+        font-weight:500;
+    }
+
+    .whx-filter-tab svg{
+        width:13px;
+        height:13px;
+    }
 }
 
 /* FULLY RESPONSIVE GRID */
@@ -53,9 +147,7 @@
     }
 }
 
-/* ============================================================================
-   PROMO CARD - FALLBACK GRADIENT (Dark UI-Friendly Slate)
-   ============================================================================ */
+/* Promo Card Base Styling */
 .whx-promo-card{
     display:flex;
     flex-direction:column;
@@ -63,9 +155,10 @@
     background:linear-gradient(135deg,#1e293b 0%,#334155 100%) !important;
     border-radius:16px;
     overflow:hidden;
-    transition:all .3s cubic-bezier(.4,0,.2,1);
+    transition:all .3s cubic-bezier(.4,0,.2,1), opacity 0.2s ease, transform 0.2s ease;
     box-shadow:0 4px 20px rgba(0,0,0,.15);
     position:relative;
+    opacity:1;
 }
 
 .whx-promo-card:hover{
@@ -73,11 +166,9 @@
     box-shadow:0 12px 40px rgba(0,0,0,.25);
 }
 
-/* ============================================================================
-   INDUSTRY-STANDARD CATEGORY COLORS
-   ============================================================================ */
+/* Category-Based Colors */
 
-/* DOMAINS - Cyan/Teal (Domain Registration Standard) */
+/* Domains - Cyan/Teal */
 .whx-promo-card[data-category="domains"],
 .whx-promo-card[data-category="domain"]{
     background:linear-gradient(135deg,#0891b2 0%,#06b6d4 100%) !important;
@@ -93,7 +184,7 @@
     background:#0e7490 !important;
 }
 
-/* HOSTING - Professional Blue (Industry Standard: Bluehost, SiteGround style) */
+/* Hosting - Professional Blue */
 .whx-promo-card[data-category="hosting"]{
     background:linear-gradient(135deg,#2563eb 0%,#3b82f6 100%) !important;
 }
@@ -106,7 +197,7 @@
     background:#1d4ed8 !important;
 }
 
-/* VPS - Dark Purple (Premium/Power) */
+/* VPS - Purple */
 .whx-promo-card[data-category="vps"]{
     background:linear-gradient(135deg,#6b21a8 0%,#7e22ce 100%) !important;
 }
@@ -119,7 +210,7 @@
     background:#581c87 !important;
 }
 
-/* EMAIL - Warm Blue (Gmail/Outlook Style) */
+/* Email - Warm Blue */
 .whx-promo-card[data-category="email"]{
     background:linear-gradient(135deg,#0284c7 0%,#0ea5e9 100%) !important;
 }
@@ -132,7 +223,7 @@
     background:#0369a1 !important;
 }
 
-/* SSL - Vibrant Green (Security/Trust) */
+/* SSL - Green */
 .whx-promo-card[data-category="ssl"]{
     background:linear-gradient(135deg,#10b981 0%,#34d399 100%) !important;
 }
@@ -145,7 +236,7 @@
     background:#059669 !important;
 }
 
-/* DEDICATED - Navy Blue (Enterprise/Power) */
+/* Dedicated - Navy Blue */
 .whx-promo-card[data-category="dedicated"]{
     background:linear-gradient(135deg,#1e3a8a 0%,#1e40af 100%) !important;
 }
@@ -158,7 +249,7 @@
     background:#1e40af !important;
 }
 
-/* PROMO (Generic) - Orange (Attention-Grabbing) */
+/* Promo - Orange */
 .whx-promo-card[data-category="promo"]{
     background:linear-gradient(135deg,#f97316 0%,#fb923c 100%) !important;
 }
@@ -171,16 +262,148 @@
     background:#ea580c !important;
 }
 
-/* ============================================================================
-   MUCH STRONGER EXPIRED STATE - Dark text, heavy desaturation
-   ============================================================================ */
+/* Black Friday - Dark with Gold Accents */
+.whx-promo-card--black-friday,
+.whx-promo-card--black-friday[data-category="domains"],
+.whx-promo-card--black-friday[data-category="domain"],
+.whx-promo-card--black-friday[data-category="hosting"],
+.whx-promo-card--black-friday[data-category="vps"],
+.whx-promo-card--black-friday[data-category="ssl"],
+.whx-promo-card--black-friday[data-category="email"],
+.whx-promo-card--black-friday[data-category="dedicated"],
+.whx-promo-card--black-friday[data-category="promo"]{
+    background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 50%,#1a1a1a 100%) !important;
+    border:2px solid #d4af37;
+    box-shadow:0 8px 32px rgba(212,175,55,0.3),0 0 0 1px rgba(212,175,55,0.1) !important;
+    position:relative;
+    overflow:visible;
+}
+
+.whx-promo-card--black-friday::before{
+    background:radial-gradient(circle at 30% 20%,rgba(212,175,55,0.15) 0%,transparent 50%),
+               radial-gradient(circle at 70% 80%,rgba(255,215,0,0.1) 0%,transparent 50%);
+}
+
+.whx-promo-card--black-friday::after{
+    content:'';
+    position:absolute;
+    top:-2px;
+    left:-2px;
+    right:-2px;
+    bottom:-2px;
+    background:linear-gradient(45deg,#d4af37,#ffd700,#d4af37);
+    border-radius:16px;
+    z-index:-1;
+    opacity:0;
+    transition:opacity .3s;
+}
+
+.whx-promo-card--black-friday:hover{
+    transform:translateY(-12px) scale(1.02);
+    box-shadow:0 16px 48px rgba(212,175,55,0.4),0 0 0 2px rgba(212,175,55,0.2) !important;
+}
+
+.whx-promo-card--black-friday:hover::after{
+    opacity:0.3;
+    animation:goldShimmer 2s ease-in-out infinite;
+}
+
+@keyframes goldShimmer{
+    0%,100%{opacity:0.2}
+    50%{opacity:0.4}
+}
+
+.whx-promo-card--black-friday .whx-promo-card__discount-badge{
+    background:linear-gradient(135deg,#d4af37 0%,#ffd700 100%) !important;
+    color:#000 !important;
+    font-weight:800;
+    box-shadow:0 4px 12px rgba(212,175,55,0.4);
+    animation:badgePulse 2s ease-in-out infinite;
+}
+
+.whx-promo-card--black-friday .whx-promo-card__title{
+    color:#ffd700 !important;
+    text-shadow:0 2px 8px rgba(212,175,55,0.5),0 0 20px rgba(255,215,0,0.3);
+}
+
+.whx-promo-card--black-friday .whx-promo-card__subtitle{
+    color:#e5e5e5 !important;
+}
+
+.whx-promo-card--black-friday .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="domains"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="domain"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="hosting"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="vps"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="ssl"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="email"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="dedicated"] .whx-promo-card__btn,
+.whx-promo-card--black-friday[data-category="promo"] .whx-promo-card__btn{
+    background:linear-gradient(135deg,#d4af37 0%,#ffd700 100%) !important;
+    color:#000 !important;
+    font-weight:800;
+    box-shadow:0 4px 16px rgba(212,175,55,0.4);
+}
+
+.whx-promo-card--black-friday .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="domains"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="domain"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="hosting"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="vps"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="ssl"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="email"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="dedicated"] .whx-promo-card__btn:hover,
+.whx-promo-card--black-friday[data-category="promo"] .whx-promo-card__btn:hover{
+    background:linear-gradient(135deg,#ffd700 0%,#ffed4e 100%) !important;
+    box-shadow:0 6px 20px rgba(212,175,55,0.6);
+}
+
+.whx-badge--black-friday{
+    background:linear-gradient(135deg,#d4af37 0%,#ffd700 100%) !important;
+    color:#000 !important;
+    font-weight:800;
+    animation:badgePulse 2s ease-in-out infinite;
+    box-shadow:0 2px 8px rgba(212,175,55,0.3);
+}
+
+/* Black Friday Domain Search Button Override */
+.whx-promo-card--black-friday .whx-search-icon-btn{
+    background:linear-gradient(135deg,#d4af37 0%,#ffd700 100%) !important;
+    color:#000 !important;
+    box-shadow:0 2px 8px rgba(212,175,55,0.4);
+}
+
+.whx-promo-card--black-friday .whx-search-icon-btn:hover{
+    background:linear-gradient(135deg,#ffd700 0%,#ffed4e 100%) !important;
+    box-shadow:0 4px 12px rgba(212,175,55,0.5);
+}
+
+/* Black Friday Copy Button Override */
+.whx-promo-card--black-friday .whx-copy-btn{
+    background:linear-gradient(135deg,#d4af37 0%,#ffd700 100%) !important;
+    color:#000 !important;
+    box-shadow:0 2px 8px rgba(212,175,55,0.4);
+}
+
+.whx-promo-card--black-friday .whx-copy-btn:hover{
+    background:linear-gradient(135deg,#ffd700 0%,#ffed4e 100%) !important;
+    box-shadow:0 4px 12px rgba(212,175,55,0.5);
+}
+
+/* Black Friday TLD Display (make it gold too) */
+.whx-promo-card--black-friday .whx-tld-display{
+    color:#ffd700;
+    font-weight:700;
+}
+
+/* Expired State */
 .whx-promo-card--expired{
     opacity:0.9 !important;
     position:relative;
     filter:saturate(0.15) brightness(1.2);
 }
 
-/* Strong white overlay for heavy desaturation */
+/* White overlay for desaturation */
 .whx-promo-card--expired::after{
     content:'';
     position:absolute;
@@ -199,7 +422,7 @@
     z-index:2;
 }
 
-/* Dark text for expired cards - much better contrast */
+/* Dark text for expired cards */
 .whx-promo-card--expired .whx-promo-card__title{
     color:#1e293b !important;
     text-shadow:none !important;
@@ -238,7 +461,7 @@
     background:transparent !important;
 }
 
-/* Discount Badge - Top Left Corner */
+/* Discount Badge */
 .whx-promo-card__discount-badge{
     display:inline-block;
     padding:0.375rem 0.875rem;
@@ -251,7 +474,7 @@
     backdrop-filter:blur(10px);
 }
 
-/* Title - Large & Bold */
+/* Title */
 .whx-promo-card__title{
     margin:0 0 0.5rem;
     font-size:1.5rem;
@@ -261,7 +484,7 @@
     text-shadow:0 2px 8px rgba(0,0,0,0.1);
 }
 
-/* Subtitle/Tagline */
+/* Subtitle */
 .whx-promo-card__subtitle{
     margin:0 0 0.75rem;
     font-size:1rem;
@@ -311,7 +534,7 @@
     50%{transform:scale(1.05)}
 }
 
-/* Card Body - White Section */
+/* Card Body */
 .whx-promo-card__body{
     display:flex;
     flex-direction:column;
@@ -363,7 +586,7 @@
     margin-left:auto;
 }
 
-/* Coupon Section - Compact */
+/* Coupon Section */
 .whx-promo-card__coupon{
     display:flex;
     align-items:center;
@@ -396,7 +619,7 @@
     text-align:center;
 }
 
-/* Copy Button - Circular */
+/* Copy Button */
 .whx-copy-btn{
     display:flex;
     align-items:center;
@@ -433,7 +656,7 @@
     height:14px;
 }
 
-/* Expiry - Inline with Icon */
+/* Expiry */
 .whx-promo-card__expiry{
     display:flex;
     align-items:center;
@@ -461,9 +684,7 @@
     opacity:1;
 }
 
-/* ============================================================================
-   SPACESHIP-STYLE DOMAIN SEARCH - Single Input with Icon Inside
-   ============================================================================ */
+/* Domain Search Field */
 
 .whx-domain-search-spaceship{
     margin-top:auto;
@@ -475,7 +696,7 @@
     align-items:center;
     background:#fff;
     border:2px solid #e5e7eb;
-    border-radius:12px;
+    border-radius:100px;
     padding:0.5rem 0.75rem;
     transition:all .2s;
 }
@@ -485,13 +706,15 @@
     box-shadow:0 0 0 3px rgba(8,145,178,0.1);
 }
 
-.whx-search-input{
+.whx-search-input,
+.whx-search-input:hover,
+.whx-search-input:focus{
     flex:1;
-    border:none;
+    border:none !important;
     outline:none;
     padding:0.375rem 0.5rem;
     font-size:0.9375rem;
-    font-weight:500;
+    font-weight:400;
     color:#1e293b;
     background:transparent;
 }
@@ -505,23 +728,13 @@
     font-weight:600;
     color:#0891b2;
     margin-right:0.5rem;
+    margin-left:0.5rem;
     white-space:nowrap;
 }
 
+/* Search button hidden - form submits on Enter key press */
 .whx-search-icon-btn{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    width:2.5rem;
-    height:2.5rem;
-    padding:0;
-    background:linear-gradient(135deg,#0891b2 0%,#06b6d4 100%);
-    color:#fff;
-    border:none;
-    border-radius:8px;
-    cursor:pointer;
-    transition:all .2s;
-    flex-shrink:0;
+    display:none;
 }
 
 .whx-search-icon-btn:hover{
@@ -539,11 +752,7 @@
     height:20px;
 }
 
-/* ============================================================================
-   CTA BUTTON (For Non-Domain Products)
-   ============================================================================ */
-
-/* CTA Button - Circular with Better Contrast */
+/* CTA Button */
 .whx-promo-card__btn{
     display:flex;
     align-items:center;
@@ -644,25 +853,21 @@
     /* Spaceship Search Mobile */
     .whx-search-wrapper{
         padding:0.375rem 0.5rem;
+        border-radius:100px;
     }
-    
-    .whx-search-input{
+
+    .whx-search-input,
+    .whx-search-input:hover,
+    .whx-search-input:focus{
         font-size:0.875rem;
         padding:0.25rem 0.375rem;
+        border:none !important;
     }
-    
+
     .whx-tld-display{
         font-size:0.875rem;
-    }
-    
-    .whx-search-icon-btn{
-        width:2.25rem;
-        height:2.25rem;
-    }
-    
-    .whx-search-icon-btn svg{
-        width:18px;
-        height:18px;
+        margin-left:0.375rem;
+        margin-right:0.375rem;
     }
 }
 
